@@ -1,0 +1,49 @@
+# Runtime data (documents, SQLite, thumbnails)
+data/
+
+# Model weights and caches
+models/
+*.gguf
+*.onnx
+*.safetensors
+*.bin
+*.pt
+*.pth
+.cache/
+huggingface/
+.huggingface/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+apps/ui/dist/
+apps/ui/.next/
+.turbo/
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and temp
+*.log
+tmp/
+/tmp/
