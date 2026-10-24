@@ -1,0 +1,68 @@
+{
+  "format_version": "1",
+  "id": "dos-ex-0001",
+  "titulo": "Controlos de acesso — rascunho de prova",
+  "conversa_id": 42,
+  "fechado_em": "2026-03-12T14:22:05Z",
+  "perguntas": [
+    {
+      "texto": "O procedimento exige revisão anual das contas privilegiadas?",
+      "modo": "procurar",
+      "lente": "verificar"
+    }
+  ],
+  "frases_aceites": [
+    {
+      "indice": 1,
+      "frase_resposta": "Sim: a revisão das contas com privilégios elevados está prevista com periodicidade anual.",
+      "trecho_literal": "As contas com privilégios elevados são revistas pelo menos uma vez por ano pelo responsável do sistema.",
+      "ficheiro": "/dados/exemplos/politica-acessos-sintetica.pdf",
+      "pagina": 7,
+      "offset_inicio": 2140,
+      "offset_fim": 2258,
+      "caixas": [
+        {
+          "pagina": 7,
+          "x": 72.5,
+          "y": 410.0,
+          "largura": 440.0,
+          "altura": 28.0
+        }
+      ],
+      "pontuacao_juiz": 0.91,
+      "sha256_ficheiro": "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0"
+    },
+    {
+      "indice": 2,
+      "frase_resposta": "O registo dessa revisão deve ficar arquivado com a data e o revisor.",
+      "trecho_literal": "Cada revisão fica registada com data, revisor e lista de contas analisadas.",
+      "ficheiro": "/dados/exemplos/politica-acessos-sintetica.pdf",
+      "pagina": 7,
+      "offset_inicio": 2260,
+      "offset_fim": 2338,
+      "caixas": [
+        {
+          "pagina": 7,
+          "x": 72.5,
+          "y": 448.0,
+          "largura": 420.0,
+          "altura": 24.0
+        }
+      ],
+      "pontuacao_juiz": 0.87,
+      "sha256_ficheiro": "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0"
+    }
+  ],
+  "ficheiros": [
+    {
+      "caminho": "/dados/exemplos/politica-acessos-sintetica.pdf",
+      "sha256": "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",
+      "titulo": "Política de acessos (exemplo sintético)"
+    }
+  ],
+  "versoes_modelo": {
+    "embedding": "google/embeddinggemma-2-270m@matryoshka-256",
+    "juiz": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1+onnx-int8+lora-r8-local",
+    "e2b": "gemma-4-e2b-qat-q4"
+  }
+}

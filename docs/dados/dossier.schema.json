@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lente.local/schemas/dossier.schema.json",
+  "title": "Dossier de prova Lente",
+  "description": "Fotografia congelada de uma conversa: perguntas, frases aceites com prova na página, hashes dos ficheiros e versões dos modelos. Export JSON alinhado ao fecho do dossier.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "fechado_em",
+    "perguntas",
+    "frases_aceites",
+    "ficheiros",
+    "versoes_modelo"
+  ],
+  "properties": {
+    "format_version": {
+      "type": "string",
+      "description": "Versão do formato de exportação do dossier.",
+      "const": "1"
+    },
+    "id": {
+      "type": "string",
+      "description": "Identificador opcional do dossier (UUID ou id interno)."
+    },
+    "titulo": {
+      "type": "string",
+      "description": "Título do dossier."
+    },
+    "conversa_id": {
+      "type": ["string", "integer"],
+      "description": "Referência à conversa de origem."
+    },
+    "fechado_em": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e hora UTC do fecho (ISO-8601)."
+    },
+    "perguntas": {
+      "type": "array",
+      "description": "Perguntas que ficaram no ecrã no momento do fecho.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["texto"],
+        "properties": {
+          "texto": {
+            "type": "string",
+            "description": "Texto da pergunta."
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo da barra de escrita, se aplicável.",
+            "enum": ["procurar", "correlacionar", "confrontar", "alerta", "lacunas"]
+          },
+          "lente": {
+            "type": "string",
+            "description": "Lente de trabalho activa.",
+            "enum": ["investigar", "assessment", "acreditacao", "verificar"]
+          }
+        }
+      }
+    },
+    "frases_aceites": {
+      "type": "array",
+      "description": "Frases da resposta que passaram as duas portas e ficaram com highlight.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "trecho_literal",
+          "ficheiro",
+          "pagina",
+          "offset_inicio",
+          "offset_fim",
+          "caixas",
+          "pontuacao_juiz",
+          "sha256_ficheiro"
+        ],
+        "properties": {
+          "indice": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Número da citação [n] na prosa."
+          },
+          "frase_resposta": {
+            "type": "string",
+            "description": "Frase da prosa do assistente associada a esta citação (opcional)."
+          },
+          "trecho_literal": {
+            "type": "string",
+            "description": "Excerto literal do documento (prova)."
+          },
+          "ficheiro": {
+            "type": "string",
+            "description": "Caminho ou nome do ficheiro de origem."
+          },
+          "pagina": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Página do highlight (1-based)."
+          },
+          "offset_inicio": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Offset de início do trecho no texto extraído."
+          },
+          "offset_fim": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Offset de fim do trecho no texto extraído."
+          },
+          "caixas": {
+            "type": "array",
+            "description": "Caixas de highlight no layout da página.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["pagina", "x", "y", "largura", "altura"],
+              "properties": {
+                "pagina": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "x": { "type": "number" },
+                "y": { "type": "number" },
+                "largura": { "type": "number" },
+                "altura": { "type": "number" }
+              }
+            }
+          },
+          "pontuacao_juiz": {
+            "type": "number",
+            "description": "Pontuação do juiz (cross-encoder) para este par pergunta/trecho."
+          },
+          "sha256_ficheiro": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$",
+            "description": "SHA-256 dos bytes do ficheiro no momento do fecho."
+          }
+        }
+      }
+    },
+    "ficheiros": {
+      "type": "array",
+      "description": "Ficheiros citados no dossier com hash no fecho.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["caminho", "sha256"],
+        "properties": {
+          "caminho": {
+            "type": "string",
+            "description": "Caminho do ficheiro no fecho."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$",
+            "description": "SHA-256 dos bytes do ficheiro nesse momento."
+          },
+          "titulo": {
+            "type": "string",
+            "description": "Título mostrado na biblioteca, se conhecido."
+          }
+        }
+      }
+    },
+    "versoes_modelo": {
+      "type": "object",
+      "description": "Versões dos modelos usadas na conversa fechada.",
+      "additionalProperties": false,
+      "required": ["embedding", "juiz", "e2b"],
+      "properties": {
+        "embedding": {
+          "type": "string",
+          "description": "Identificador/versão do EmbeddingGemma."
+        },
+        "juiz": {
+          "type": "string",
+          "description": "Identificador do juiz ONNX, incluindo LoRA se activo."
+        },
+        "e2b": {
+          "type": "string",
+          "description": "Identificador/versão do Gemma 4 E2B."
+        }
+      }
+    }
+  }
+}
