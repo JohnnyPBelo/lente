@@ -14,7 +14,13 @@ export const copy = {
     group: "Conversas",
   },
   learn: {
-    export: "Exportar correções",
+    lens: {
+    investigate: "Investigar",
+    assessment: "Assessment",
+    accreditation: "Acreditação",
+    verify: "Verificar",
+  },
+  export: "Exportar correções",
     import: "Importar correções",
     group: "Aprendizagem",
   },
@@ -55,6 +61,7 @@ export const copy = {
   chat: {
     empty_title: "Nova conversa",
     empty_body: "Escreve a primeira procura na barra em baixo.",
+    threshold: "Limiar",
   },
   lib: {
     title: "Biblioteca",
