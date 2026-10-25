@@ -41,6 +41,18 @@ tests/pesquisa/test_literal.py::test_reg_bus_007
 tests/pesquisa/test_limiar_platt.py::test_reg_bus_010
 tests/pesquisa/test_feedback_runtime.py::test_reg_fbk_007
 
+tests/embeddings/test_cortar.py::test_reg_ing_010
+tests/embeddings/test_miniatura.py::test_reg_ing_011
+tests/embeddings/test_embedding_dim.py::test_reg_bus_001
+tests/embeddings/test_prefixos.py::test_reg_bus_002
+tests/embeddings/test_dispositivo.py::test_reg_mod_005
+tests/embeddings/test_sem_visao_audio.py::test_reg_for_004
+tests/pesquisa/test_fts5.py::test_reg_bus_003
+tests/pesquisa/test_cosseno_exacto.py::test_reg_bus_005
+tests/pesquisa/test_mesmo_ficheiro.py::test_reg_bus_006
+tests/pesquisa/test_escala_exacta.py::test_reg_des_001
+tests/pesquisa/test_sem_ann.py::test_reg_for_001
+
 tests/alertas/test_criar.py::test_reg_ale_001
 tests/alertas/test_limite.py::test_reg_ale_002
 apps/ui/src/components/alertas/reg-ale-003.test.tsx
