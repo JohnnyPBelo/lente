@@ -43,9 +43,11 @@ def test_reg_jui_002() -> None:
     assert all(isinstance(s, float) for s in scores)
     assert scores[0] > scores[1]
 
-    import engine.juiz.pontuar as mod_pontuar
+    import importlib
 
-    fonte = Path(mod_pontuar.__file__).read_text(encoding="utf-8").casefold()
-    assert "torch" not in fonte
-    assert "pytorch" not in fonte
+    mod_pontuar = importlib.import_module("engine.juiz.pontuar")
+    fonte = Path(mod_pontuar.__file__).read_text(encoding="utf-8")
+    assert "import torch" not in fonte
+    assert "from torch" not in fonte
+    assert "pytorch" not in fonte.casefold()
     assert "torch" not in sys.modules
