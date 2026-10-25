@@ -34,6 +34,7 @@ def test_reg_des_001(ligacao) -> None:
     hash_id = int(ligacao.execute("SELECT last_insert_rowid()").fetchone()[0])
 
     alvo_bloco: int | None = None
+    eixo_alvo = 7
     for i in range(n):
         texto = f"bloco escala {i}"
         ligacao.execute(
@@ -43,12 +44,15 @@ def test_reg_des_001(ligacao) -> None:
             (documento_id, hash_id, i, texto, len(texto)),
         )
         bloco_id = int(ligacao.execute("SELECT last_insert_rowid()").fetchone()[0])
-        v = [0.0] * DIMENSOES
-        v[i % DIMENSOES] = 1.0 + (i / n)
         if i == alvo_ordem:
             v = [0.0] * DIMENSOES
-            v[0] = 42.0
+            v[eixo_alvo] = 1.0
             alvo_bloco = bloco_id
+        else:
+            # Direcções distintas que não colidem com o eixo do alvo.
+            v = [0.0] * DIMENSOES
+            v[0] = float(i + 1)
+            v[1] = 1.0
         guardar_vector(
             ligacao,
             bloco_id=bloco_id,
@@ -58,7 +62,8 @@ def test_reg_des_001(ligacao) -> None:
     ligacao.commit()
     assert alvo_bloco is not None
 
-    consulta = normalizar([42.0] + [0.0] * (DIMENSOES - 1))
+    consulta = [0.0] * DIMENSOES
+    consulta[eixo_alvo] = 1.0
     resultados = procurar_cosseno(ligacao, consulta, limite=5)
     assert resultados
     assert resultados[0].bloco_id == alvo_bloco

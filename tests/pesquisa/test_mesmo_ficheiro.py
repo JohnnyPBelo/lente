@@ -30,6 +30,8 @@ def test_reg_bus_006(caminho_tmp: Path, tmp_path: Path) -> None:
         hash_id=hash_id,
     )
     guardar_vector(ligacao, bloco_id=bloco_id, hash_id=hash_id, vector=vector)
+    # Garantir que o WAL está no ficheiro principal antes da cópia.
+    ligacao.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     ligacao.close()
 
     copia = tmp_path / "copia" / "lente.sqlite"
