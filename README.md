@@ -41,7 +41,8 @@ Pesos ficam fora deste git. Se o download Hugging Face falhar por licença, a ap
 | [docs/estrutura/](docs/estrutura/) | Árvore, módulos, contrato HTTP |
 | [docs/planos/](docs/planos/) | PLN-01 … PLN-21 |
 | [docs/rastreio/](docs/rastreio/) | Matriz origem → requisitos → planos |
-| [docs/desenvolvimento/](docs/desenvolvimento/) | Arranque: ambiente, ondas, pacotes, convenções |
+| [docs/desenvolvimento/](docs/desenvolvimento/) | Arranque: ambiente, ondas, pacotes, convenções, regressão |
+| [docs/verificacao/](docs/verificacao/) | Cobertura de cada requisito por uma regressão e como escolher um rascunho |
 
 ## Licença
 

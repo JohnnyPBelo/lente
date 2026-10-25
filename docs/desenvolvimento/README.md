@@ -9,6 +9,8 @@ A especificação já está no ramo `main`. Este directório é o que se lê **a
 3. [ondas.md](ondas.md) — o que pode avançar em paralelo e o que espera pelo plano anterior.
 4. [convencoes.md](convencoes.md) — testes, commits, língua, o que nunca entra no git.
 5. [glossario.md](glossario.md) — termos do plano com o sítio onde estão fechados.
+6. [regressao.md](regressao.md) — a suite que tem de ficar verde antes de integrar código em `main`.
+7. [../verificacao/README.md](../verificacao/README.md) — o que significa cobertura completa e como se escolhe um rascunho.
 
 O primeiro código é o [PLN-01](../planos/PLN-01-esquema-sqlite-e-migracoes.md): esquema SQLite e migrações, sem modelos e sem HTTP.
 

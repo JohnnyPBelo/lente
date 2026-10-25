@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Gancho opcional. O repositório não activa core.hooksPath.
+# A porta obrigatória é o GitHub Actions.
+raiz="$(cd "$(dirname "$0")/../.." && pwd)"
+exec "$raiz/scripts/regressao.sh"

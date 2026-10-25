@@ -1,0 +1,8 @@
+tests/regressao/test_suite.py::test_manifesto_sem_duplicados
+tests/regressao/test_suite.py::test_manifesto_nao_encolhe
+tests/regressao/test_suite.py::test_manifesto_ids_recolhidos
+tests/regressao/test_suite.py::test_esquemas_json_aceitam_exemplos
+tests/regressao/test_suite.py::test_cada_req_aparece_uma_vez_na_cobertura
+tests/regressao/test_suite.py::test_reg_agora_estao_no_manifesto
+tests/regressao/test_suite.py::test_nao_ha_pesos_de_modelo_versionados
+tests/regressao/test_suite.py::test_plano_origem_e_buracos
