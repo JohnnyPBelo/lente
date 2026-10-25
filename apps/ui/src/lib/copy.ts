@@ -17,10 +17,32 @@ export const copy = {
     import: "Importar correções",
     group: "Aprendizagem",
   },
+  mode: {
+    search: "Procurar",
+    correlate: "Correlacionar",
+    confront: "Confrontar",
+    alert: "Alerta",
+    gaps: "Lacunas",
+  },
   bar: {
     placeholder_search: "Pergunta ou termo a procurar",
     send: "Enviar",
     menu_hint: "Escolhe um modo",
+  },
+  export: {
+    title: "Exportar correções",
+    warning:
+      "Os trechos exportados são texto dos teus documentos. Ao exportar, essas frases **saem desta máquina**.",
+    confirm: "Exportar mesmo assim",
+    cancel: "Não exportar",
+  },
+  import: {
+    title: "Importar correções",
+    summary: "{n} correções · lentes: {lenses}",
+    sample: "Exemplos de perguntas",
+    confirm: "Confirmar e treinar quando a máquina estiver livre",
+    reject_model: "Este ficheiro é de outro modelo base e foi recusado",
+    duplicates: "Pares repetidos entram uma vez",
   },
   chat: {
     empty_title: "Nova conversa",
@@ -31,3 +53,12 @@ export const copy = {
     write_bar: "Barra de escrita",
   },
 } as const;
+
+/** Entradas do menu + / / — sem exportar/importar correções (REQ-BAR-012). */
+export const entradasMenuMais = [
+  copy.mode.search,
+  copy.mode.correlate,
+  copy.mode.confront,
+  copy.mode.alert,
+  copy.mode.gaps,
+] as const;
