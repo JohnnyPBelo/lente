@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { AreaChat } from "./components/chrome/AreaChat";
 import { BarraLateral } from "./components/chrome/BarraLateral";
-import { CampoEscritaBase } from "./components/chrome/CampoEscritaBase";
+import { BarraEscrita } from "./components/barra/BarraEscrita";
 import type { MensagemFalsa } from "./lib/api";
 
 /**
@@ -32,7 +32,14 @@ export function App() {
         {/* PLN-14: barra de modos e lentes */}
         <div data-slot="barra-modos" className="slot-vazio" />
         <AreaChat mensagens={mensagens} />
-        <CampoEscritaBase onEnviar={aoEnviar} />
+        <BarraEscrita
+          chatId={conversaActivaId ?? "cht_01"}
+          onResultado={(r) => {
+            if (r.tipo === "procurar") {
+              aoEnviar(r.texto);
+            }
+          }}
+        />
         {/* PLN-15: leque e leitor */}
         <div data-slot="leitor" className="slot-vazio" aria-hidden="true" />
       </main>
