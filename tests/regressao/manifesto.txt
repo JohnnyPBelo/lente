@@ -6,3 +6,15 @@ tests/regressao/test_suite.py::test_cada_req_aparece_uma_vez_na_cobertura
 tests/regressao/test_suite.py::test_reg_agora_estao_no_manifesto
 tests/regressao/test_suite.py::test_nao_ha_pesos_de_modelo_versionados
 tests/regressao/test_suite.py::test_plano_origem_e_buracos
+
+tests/armazenamento/test_migracoes.py::test_reg_mig_001
+tests/ingestao/test_texto_md_docx.py::test_reg_ing_001
+tests/ingestao/test_texto_md_docx.py::test_reg_ing_002
+tests/ingestao/test_texto_md_docx.py::test_reg_ing_003
+tests/ingestao/test_texto_md_docx.py::test_reg_ing_004
+tests/ingestao/test_hash.py::test_reg_ing_008
+tests/escalonador/test_fila.py::test_reg_ing_009
+tests/escalonador/test_slot.py::test_reg_bus_012
+tests/escalonador/test_nucleos.py::test_reg_mod_003
+tests/escalonador/test_estados.py::test_reg_mod_004
+tests/escalonador/test_orcamento.py::test_reg_des_003
