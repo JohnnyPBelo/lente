@@ -4,10 +4,7 @@
  * Copy: docs/interface/copy.md → chat.dossier.*
  */
 
-export const COPY_DOSSIER_REOPEN = "Reabrir dossier";
-export const COPY_DOSSIER_SOURCE_CHANGED =
-  "A fonte mudou depois do fecho; a prova antiga mantém-se";
-export const COPY_OPEN_SOURCE = "Abrir na página";
+import { copy } from "../../lib/copy";
 
 export type CaixaProva = {
   pagina: number;
@@ -46,11 +43,11 @@ export function VistaDossier({
   onAbrirProva,
 }: VistaDossierProps) {
   return (
-    <article className="vista-dossier" aria-label={COPY_DOSSIER_REOPEN}>
+    <article className="vista-dossier" aria-label={copy.chat.dossier.reopen}>
       {titulo ? <h2 className="vista-dossier__titulo">{titulo}</h2> : null}
       {fonteAlterada ? (
         <p className="vista-dossier__aviso" role="status">
-          {COPY_DOSSIER_SOURCE_CHANGED}
+          {copy.chat.dossier.source_changed}
         </p>
       ) : null}
       <ul className="vista-dossier__frases">
@@ -72,7 +69,7 @@ export function VistaDossier({
                 data-offset-fim={frase.offset_fim ?? 0}
                 data-caixas={caixasJson}
                 data-ficheiro={frase.ficheiro ?? ""}
-                aria-label={`${COPY_OPEN_SOURCE}: ${rotulo}`}
+                aria-label={`${copy.chat.open_source}: ${rotulo}`}
                 onClick={() => onAbrirProva?.(frase)}
               >
                 {rotulo}

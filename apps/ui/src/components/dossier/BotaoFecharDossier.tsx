@@ -3,7 +3,7 @@
  * Copy: docs/interface/copy.md → chat.dossier.close
  */
 
-export const COPY_DOSSIER_CLOSE = "Fechar dossier";
+import { copy } from "../../lib/copy";
 
 export type BotaoFecharDossierProps = {
   onFechar: () => void | Promise<void>;
@@ -23,7 +23,7 @@ export function BotaoFecharDossier({
         void onFechar();
       }}
     >
-      {COPY_DOSSIER_CLOSE}
+      {copy.chat.dossier.close}
     </button>
   );
 }
