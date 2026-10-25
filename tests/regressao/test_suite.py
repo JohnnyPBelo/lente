@@ -76,6 +76,8 @@ def test_plano_origem_e_buracos() -> None:
     apoio.plano_e_buracos()
 
 
+
+
 def test_reg_fbk_001() -> None:
     """REG-FBK-001: copy das acções Acertou / Corrigir / Descartar existe."""
     texto = (apoio.raiz() / "docs" / "interface" / "copy.md").read_text(encoding="utf-8")
