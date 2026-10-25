@@ -9,7 +9,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Callable
 from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
 from engine.ingestao.registo import DocumentoRegisto, registar_texto
