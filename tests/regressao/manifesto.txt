@@ -64,3 +64,16 @@ apps/ui/src/components/aprendizagem/reg-fbk-017.test.tsx
 tests/feedback/test_export_import.py::test_reg_fbk_018
 tests/feedback/test_export_import.py::test_reg_seg_004
 tests/feedback/test_export_import.py::test_reg_for_003
+tests/resposta/test_seguimento.py::test_reg_bus_008
+tests/resposta/test_prompt.py::test_reg_res_001
+tests/resposta/test_prompt.py::test_reg_res_002
+tests/resposta/test_prompt.py::test_reg_res_003
+tests/resposta/test_portas.py::test_reg_res_004
+tests/resposta/test_portas.py::test_reg_res_005
+tests/resposta/test_portas.py::test_reg_res_006
+tests/resposta/test_portas.py::test_reg_res_007
+tests/resposta/test_sem_e2b.py::test_reg_res_008
+tests/resposta/test_visita.py::test_reg_res_010
+tests/resposta/test_sem_e2b_modos.py::test_reg_res_011
+tests/resposta/test_sem_bf16.py::test_reg_mod_006
+tests/resposta/test_prompt.py::test_reg_for_006
