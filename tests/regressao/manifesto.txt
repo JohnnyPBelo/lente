@@ -25,6 +25,16 @@ tests/juiz/test_sem_outro_decisor.py::test_reg_for_005
 tests/ingestao/test_url.py::test_reg_ing_007
 tests/ingestao/test_ssrf.py::test_reg_seg_001
 tests/ingestao/test_ocr.py::test_reg_ing_006
+tests/feedback/test_registar.py::test_reg_jui_004
+tests/feedback/test_lora_gate.py::test_reg_jui_005
+tests/feedback/test_registar.py::test_reg_fbk_002
+tests/feedback/test_registar.py::test_reg_fbk_004
+tests/feedback/test_registar.py::test_reg_fbk_005
+tests/feedback/test_lora_gate.py::test_reg_fbk_006
+tests/feedback/test_lora_gate.py::test_reg_fbk_008
+tests/feedback/test_lora_gate.py::test_reg_fbk_009
+tests/feedback/test_lora_gate.py::test_reg_fbk_010
+tests/feedback/test_lora_gate.py::test_reg_for_007
 tests/biblioteca/test_etiquetas.py::test_reg_bib_001
 tests/biblioteca/test_etiquetas.py::test_reg_bib_002
 tests/diario/test_append.py::test_reg_dia_001
