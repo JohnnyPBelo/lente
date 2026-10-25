@@ -46,6 +46,10 @@ class SlotPesado:
         """ONNX do juiz em vigor; a procura usa-o mesmo com LoRA pausado."""
         return self._onnx_activo
 
+    def definir_onnx_activo(self, caminho: str) -> None:
+        """Actualiza o ONNX em vigor (só após export aceite do LoRA)."""
+        self._onnx_activo = caminho
+
     def ponto_de_pausa(self) -> None:
         """Ponto de cooperação: indexação/LoRA cedem o slot à procura."""
         with self._cv:

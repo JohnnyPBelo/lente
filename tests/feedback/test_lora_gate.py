@@ -14,7 +14,6 @@ from engine.feedback.lora import (
     LEARNING_RATE,
     RANK,
     EstadoTorch,
-    libertar_torch,
     treinar_lora,
 )
 from engine.feedback.registar import listar_pares, registar_acertou
@@ -81,7 +80,7 @@ def test_reg_jui_005(caminho_tmp, tmp_path: Path) -> None:
 
     registar_acertou(
         ligacao,
-        mensagem_id=1,
+        mensagem_id=None,
         pergunta="P?",
         trechos_mostrados=["trecho bom"],
         lente="investigar",
@@ -123,7 +122,7 @@ def test_reg_fbk_006(caminho_tmp) -> None:
 
     registar_acertou(
         ligacao,
-        mensagem_id=1,
+        mensagem_id=None,
         pergunta="P?",
         trechos_mostrados=["ok"],
         lente="investigar",
@@ -144,7 +143,7 @@ def test_reg_fbk_008(caminho_tmp) -> None:
     for i, trecho in enumerate(["a", "b", "c"], start=1):
         registar_acertou(
             ligacao,
-            mensagem_id=i,
+            mensagem_id=None,
             pergunta=f"P{i}?",
             trechos_mostrados=[trecho],
             lente="investigar",
@@ -168,7 +167,7 @@ def test_reg_fbk_009(caminho_tmp) -> None:
     treinador = _TreinadorDuplo()
     registar_acertou(
         ligacao,
-        mensagem_id=1,
+        mensagem_id=None,
         pergunta="P?",
         trechos_mostrados=["t"],
         lente="investigar",
@@ -206,7 +205,7 @@ def test_reg_fbk_010(caminho_tmp, tmp_path: Path) -> None:
     treinador.treinar = treinar_pior  # type: ignore[method-assign]
     registar_acertou(
         ligacao,
-        mensagem_id=1,
+        mensagem_id=None,
         pergunta="P?",
         trechos_mostrados=["t1", "t2", "t3", "t4"],
         lente="investigar",
@@ -260,7 +259,7 @@ def test_reg_for_007(caminho_tmp) -> None:
     treinador = _TreinadorDuplo()
     registar_acertou(
         ligacao,
-        mensagem_id=1,
+        mensagem_id=None,
         pergunta="P?",
         trechos_mostrados=["t"],
         lente="investigar",

@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Any
-
-import pytest
 
 from engine.armazenamento.repositorio import abrir
 from engine.escalonador.slot import SlotPesado
@@ -47,7 +44,7 @@ def test_reg_fbk_002(caminho_tmp) -> None:
 
     registar_descartar(
         ligacao,
-        mensagem_id=1,
+        mensagem_id=None,
         pergunta="Qual é a capital?",
         trechos_mostrados=["Lisboa é a capital de Portugal."],
         lente="investigar",
@@ -70,7 +67,7 @@ def test_reg_fbk_004(caminho_tmp) -> None:
 
     registar_acertou(
         ligacao,
-        mensagem_id=10,
+        mensagem_id=None,
         pergunta="Qual é a capital de Portugal?",
         trechos_mostrados=trechos,
         lente="investigar",
@@ -96,7 +93,7 @@ def test_reg_fbk_005(caminho_tmp) -> None:
 
     registar_corrigir(
         ligacao,
-        mensagem_id=20,
+        mensagem_id=None,
         pergunta="Onde está a prova?",
         marcas_resposta=marcas,
         selecao=selecao,
@@ -120,7 +117,7 @@ def test_feedback_nao_adquire_slot_search(caminho_tmp) -> None:
         # mesmo com procura activa, o registo não pede search de novo
         registar_acertou(
             ligacao,
-            mensagem_id=3,
+            mensagem_id=None,
             pergunta="p",
             trechos_mostrados=["t"],
             lente="investigar",
@@ -145,14 +142,14 @@ def test_reg_jui_004(caminho_tmp) -> None:
 
     registar_acertou(
         ligacao,
-        mensagem_id=1,
+        mensagem_id=None,
         pergunta=pergunta,
         trechos_mostrados=[confirmado],
         lente="investigar",
     )
     registar_corrigir(
         ligacao,
-        mensagem_id=2,
+        mensagem_id=None,
         pergunta=pergunta,
         marcas_resposta=[rejeitado],
         selecao=confirmado,
@@ -181,14 +178,14 @@ def test_hash_par_estavel_e_unico(caminho_tmp) -> None:
     trecho = "Mesmo trecho."
     registar_acertou(
         ligacao,
-        mensagem_id=1,
+        mensagem_id=None,
         pergunta="P?",
         trechos_mostrados=[trecho],
         lente="investigar",
     )
     registar_acertou(
         ligacao,
-        mensagem_id=2,
+        mensagem_id=None,
         pergunta="P?",
         trechos_mostrados=[trecho],
         lente="investigar",
