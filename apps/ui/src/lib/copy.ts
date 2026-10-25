@@ -18,6 +18,12 @@ export const copy = {
     import: "Importar correções",
     group: "Aprendizagem",
   },
+  alerts: {
+    group: "Alertas",
+    toggle_on: "Alerta ligado",
+    toggle_off: "Alerta desligado",
+    limit: "Atingiste o máximo de 10 alertas",
+  },
   mode: {
     search: "Procurar",
     correlate: "Correlacionar",
@@ -27,6 +33,7 @@ export const copy = {
   },
   bar: {
     placeholder_search: "Pergunta ou termo a procurar",
+    alert_placeholder: "O que queres que eu vigie?",
     send: "Enviar",
     menu_hint: "Escolhe um modo",
   },
