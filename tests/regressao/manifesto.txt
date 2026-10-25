@@ -52,3 +52,10 @@ tests/pesquisa/test_cosseno_exacto.py::test_reg_bus_005
 tests/pesquisa/test_mesmo_ficheiro.py::test_reg_bus_006
 tests/pesquisa/test_escala_exacta.py::test_reg_des_001
 tests/pesquisa/test_sem_ann.py::test_reg_for_001
+
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_003
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_004
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_005
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_006
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_007
+tests/dossier/test_export.py::test_reg_dos_008
