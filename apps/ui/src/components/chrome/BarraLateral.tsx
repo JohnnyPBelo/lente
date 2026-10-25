@@ -6,6 +6,7 @@ import {
   semearConversas,
 } from "../../lib/api";
 import { copy } from "../../lib/copy";
+import { EstadoAprendizagem } from "../aprendizagem/EstadoAprendizagem";
 
 export type ConversaLista = { id: string; nome: string };
 
@@ -97,17 +98,7 @@ export function BarraLateral({
 
   return (
     <nav className="barra-lateral vidro" aria-label={copy.a11y.sidebar}>
-      <div className="barra-lateral__aprendizagem">
-        <p className="barra-lateral__grupo">{copy.learn.group}</p>
-        <div className="barra-lateral__acoes-aprendizagem">
-          <button type="button" className="botao-fantasma" disabled>
-            {copy.learn.export}
-          </button>
-          <button type="button" className="botao-fantasma" disabled>
-            {copy.learn.import}
-          </button>
-        </div>
-      </div>
+      <EstadoAprendizagem />
 
       <div className="barra-lateral__conversas">
         <div className="barra-lateral__cabecalho">
