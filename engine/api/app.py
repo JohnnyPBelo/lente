@@ -14,6 +14,7 @@ from engine.api.estaticos import montar_estaticos
 from engine.api.motor import motor_procura_sem_e2b
 from engine.api.rotas_biblioteca import rotas_biblioteca
 from engine.api.rotas_chat import rotas_chat
+from engine.api.rotas_documento import rotas_documento
 from engine.api.rotas_dossier import rotas_dossier
 from engine.api.rotas_modos import rotas_modos
 from engine.armazenamento.repositorio import abrir
@@ -59,6 +60,7 @@ def criar_app(
         *rotas_modos(),
         *rotas_biblioteca(),
         *rotas_dossier(),
+        *rotas_documento(),
     ]
 
     app = Starlette(routes=rotas)

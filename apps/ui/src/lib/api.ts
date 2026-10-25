@@ -46,12 +46,54 @@ function novoId(prefixo: string): string {
   return `${prefixo}_${String(sequencia).padStart(2, "0")}`;
 }
 
+export type DocumentoLeitor = {
+  id: string;
+  titulo: string;
+  tipo: "pdf" | "texto" | "markdown" | "url" | "imagem";
+  paginas: number;
+  hash_sha256: string;
+  desactualizado: boolean;
+  sumario: { titulo: string; pagina: number }[];
+  etiquetas: string[];
+};
+
+export type PaginaLeitor = {
+  pagina: number;
+  texto: string;
+  largura: number;
+  altura: number;
+};
+
+export type HighlightApi = {
+  n: number;
+  pagina: number;
+  offsets: { inicio: number; fim: number };
+  caixas?: { pagina: number; x: number; y: number; w: number; h: number }[];
+  mensagem_id?: string;
+};
+
+let documentosFalsos: Record<string, DocumentoLeitor> = {};
+let paginasFalsas: Record<string, PaginaLeitor> = {};
+let highlightsFalsos: Record<string, HighlightApi[]> = {};
+let fixadosFalsos: {
+  id: string;
+  chat_id: string;
+  documento_id: string;
+  pagina: number;
+  texto: string;
+  offsets: { inicio: number; fim: number };
+}[] = [];
+
 export function reiniciarApiFalsa(): void {
   sequencia = 0;
   chats = [];
   usarFalso = true;
   limiarActual = 0.55;
   alertasFalsos = [];
+  documentosFalsos = {};
+  paginasFalsas = {};
+  highlightsFalsos = {};
+  fixadosFalsos = [];
 }
 
 export function activarApiFalsa(activo = true): void {
@@ -406,4 +448,97 @@ export function semearAlertasFalsos(n: number): void {
 
 export function listarAlertasFalsos(): typeof alertasFalsos {
   return [...alertasFalsos];
+}
+
+
+export function semearDocumento(
+  doc: DocumentoLeitor,
+  paginas: PaginaLeitor[] = [],
+  highlights: HighlightApi[] = [],
+): void {
+  documentosFalsos[doc.id] = doc;
+  for (const p of paginas) {
+    paginasFalsas[`${doc.id}:${p.pagina}`] = p;
+  }
+  highlightsFalsos[doc.id] = highlights;
+}
+
+export async function obterDocumento(id: string): Promise<DocumentoLeitor> {
+  if (!usarFalso) {
+    const r = await pedir<DocumentoLeitor>(`/documents/${id}`);
+    if (r) return r;
+  }
+  return (
+    documentosFalsos[id] ?? {
+      id,
+      titulo: id,
+      tipo: "texto",
+      paginas: 1,
+      hash_sha256: "a".repeat(64),
+      desactualizado: false,
+      sumario: [],
+      etiquetas: [],
+    }
+  );
+}
+
+export async function obterPagina(
+  documentoId: string,
+  pagina: number,
+): Promise<PaginaLeitor> {
+  if (!usarFalso) {
+    const r = await pedir<PaginaLeitor>(
+      `/documents/${documentoId}/pages/${pagina}`,
+    );
+    if (r) return r;
+  }
+  return (
+    paginasFalsas[`${documentoId}:${pagina}`] ?? {
+      pagina,
+      texto: "",
+      largura: 595,
+      altura: 842,
+    }
+  );
+}
+
+export async function obterHighlights(
+  documentoId: string,
+  mensagemId?: string,
+): Promise<HighlightApi[]> {
+  if (!usarFalso) {
+    const q = mensagemId ? `?mensagem_id=${encodeURIComponent(mensagemId)}` : "";
+    const r = await pedir<{ itens: HighlightApi[] }>(
+      `/documents/${documentoId}/highlights${q}`,
+    );
+    if (r) return r.itens;
+  }
+  const todos = highlightsFalsos[documentoId] ?? [];
+  if (!mensagemId) return todos;
+  return todos.filter((h) => !h.mensagem_id || h.mensagem_id === mensagemId);
+}
+
+export async function fixarTrecho(
+  chatId: string,
+  trecho: {
+    documento_id: string;
+    pagina: number;
+    texto: string;
+    offsets: { inicio: number; fim: number };
+  },
+): Promise<{ id: string }> {
+  if (!usarFalso) {
+    const r = await pedir<{ id: string }>(`/chats/${chatId}/fixados`, {
+      method: "POST",
+      body: JSON.stringify(trecho),
+    });
+    if (r) return r;
+  }
+  const id = novoId("fix");
+  fixadosFalsos.push({ id, chat_id: chatId, ...trecho });
+  return { id };
+}
+
+export function listarFixadosFalsos(chatId: string) {
+  return fixadosFalsos.filter((f) => f.chat_id === chatId);
 }
