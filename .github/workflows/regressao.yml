@@ -28,6 +28,19 @@ jobs:
       - name: Instalar o pytest e sqlite-vec
         run: python -m pip install pytest sqlite-vec
 
+      - name: Node 22
+        if: hashFiles('apps/ui/package.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/ui/package-lock.json
+
+      - name: Instalar dependências da UI
+        if: hashFiles('apps/ui/package.json') != ''
+        run: npm ci
+        working-directory: apps/ui
+
       - name: Correr a suite de regressão
         env:
           REGRESSAO_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
