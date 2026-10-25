@@ -18,6 +18,7 @@ from engine.embeddings.cortar import BlocoCortado, cortar_blocos
 from engine.embeddings.frases import FraseSegmentada, segmentar_frases
 from engine.embeddings.prefixos import prefixo_documento
 from engine.ingestao.caixas import Caixa, caixas_para_json
+from engine.pesquisa.fts import indexar_bloco
 
 
 @dataclass(frozen=True)
@@ -35,21 +36,23 @@ def guardar_vector(
     bloco_id: int,
     vec: Sequence[float],
 ) -> None:
-    """Persiste o vector 256d (BLOB float32 LE) até o PLN-07 ligar sqlite-vec."""
+    """Persiste o vector 256d via ``engine.pesquisa.vec`` (mesmo SQLite / cosseno exacto)."""
+    from engine.pesquisa.vec import guardar_vector as persistir_vector
+
     if len(vec) != DIMENSAO:
         raise ValueError(f"vector tem de ter {DIMENSAO} dimensões, não {len(vec)}")
-    blob = struct.pack(f"<{DIMENSAO}f", *[float(x) for x in vec])
-    ligacao.execute(
-        "CREATE TABLE IF NOT EXISTS vectores ("
-        "bloco_id INTEGER PRIMARY KEY REFERENCES blocos (id) ON DELETE CASCADE, "
-        "dimensoes INTEGER NOT NULL, "
-        "embedding BLOB NOT NULL"
-        ")"
-    )
-    ligacao.execute(
-        "INSERT OR REPLACE INTO vectores (bloco_id, dimensoes, embedding) "
-        "VALUES (?, ?, ?)",
-        (bloco_id, DIMENSAO, blob),
+    linha = ligacao.execute(
+        "SELECT hash_id FROM blocos WHERE id = ?",
+        (bloco_id,),
+    ).fetchone()
+    if linha is None:
+        raise LookupError(f"bloco {bloco_id} inexistente para guardar vector")
+    hash_id = int(linha[0] if not hasattr(linha, "keys") else linha["hash_id"])
+    persistir_vector(
+        ligacao,
+        bloco_id=bloco_id,
+        hash_id=hash_id,
+        vector=vec,
     )
 
 
@@ -117,6 +120,13 @@ def indexar_documento(
             bloco=bloco,
         )
         guardar_vector(ligacao, bloco_id, vector)
+        indexar_bloco(
+            ligacao,
+            bloco_id=bloco_id,
+            texto=bloco.texto,
+            documento_id=documento_id,
+            hash_id=hash_id,
+        )
 
         locais = _caixas_relativas_ao_bloco(bloco, caixas_por_intervalo or [])
         frases = segmentar_frases(
