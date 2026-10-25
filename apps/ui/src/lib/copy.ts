@@ -69,6 +69,7 @@ export const copy = {
     empty_title: "Nova conversa",
     empty_body: "Escreve a primeira procura na barra em baixo.",
     threshold: "Limiar",
+    threshold: "Limiar",
     open_source: "Abrir na página",
     dossier: {
       close: "Fechar dossier",
