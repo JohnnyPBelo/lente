@@ -53,6 +53,18 @@ tests/pesquisa/test_mesmo_ficheiro.py::test_reg_bus_006
 tests/pesquisa/test_escala_exacta.py::test_reg_des_001
 tests/pesquisa/test_sem_ann.py::test_reg_for_001
 
+apps/ui/src/components/aprendizagem/reg-bar-012.test.tsx
+tests/feedback/test_export_import.py::test_reg_fbk_011
+tests/feedback/test_export_import.py::test_reg_fbk_012
+apps/ui/src/components/aprendizagem/reg-fbk-013.test.tsx
+tests/feedback/test_export_import.py::test_reg_fbk_014
+tests/feedback/test_export_import.py::test_reg_fbk_015
+tests/feedback/test_export_import.py::test_reg_fbk_016
+apps/ui/src/components/aprendizagem/reg-fbk-017.test.tsx
+tests/feedback/test_export_import.py::test_reg_fbk_018
+tests/feedback/test_export_import.py::test_reg_seg_004
+tests/feedback/test_export_import.py::test_reg_for_003
+
 tests/alertas/test_criar.py::test_reg_ale_001
 tests/alertas/test_limite.py::test_reg_ale_002
 tests/alertas/test_criar.py::test_reg_ale_003
