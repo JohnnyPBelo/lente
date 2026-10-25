@@ -1,0 +1,49 @@
+@import "./tokens.css";
+
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2")
+    format("woff2");
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#raiz {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--lente-fonte-chrome);
+  background: var(--lente-fundo);
+  color: var(--lente-texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.vidro {
+  background: var(--lente-vidro-fundo);
+  background-image: var(--lente-vidro-brilho);
+  backdrop-filter: blur(var(--lente-vidro-blur));
+  -webkit-backdrop-filter: blur(var(--lente-vidro-blur));
+  border: 1px solid var(--lente-vidro-bordo);
+}
+
+.vidro-activo {
+  border-color: var(--lente-vidro-bordo-activo);
+}
