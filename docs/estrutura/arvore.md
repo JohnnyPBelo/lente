@@ -71,3 +71,7 @@ Runtime. Gitignored. Pesos: EmbeddingGemma 2 (~2 GB), juiz ONNX (~0,5 GB / ~120 
 ## `docs/`
 
 Esta especificação (origem, leitura, estrutura, e o resto da ordem em [LEITURA.md](../LEITURA.md)). Não é código de execução.
+
+## Pacotes de código
+
+Os nomes acima (`indice/`, `escritor/`) são papéis. Os ficheiros que os planos criam usam pacotes mais finos (`engine/embeddings/`, `engine/resposta/`, …). O mapa que o desenvolvimento segue está em [docs/desenvolvimento/mapa-codigo.md](../desenvolvimento/mapa-codigo.md).

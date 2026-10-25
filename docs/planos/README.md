@@ -1,6 +1,6 @@
 # Planos de implementação (PLN-01 … PLN-21)
 
-Guias para construção futura da Lente. Cada plano nomeia ficheiros futuros e o primeiro teste que deve falhar; **não** cria código de aplicação neste PR.
+Guias para construir a Lente. Cada plano nomeia ficheiros futuros e o primeiro teste que deve falhar. Estes ficheiros ainda não existem no repositório: o código entra quando o plano for executado.
 
 Fonte de verdade: [docs/origem/plano.md](../origem/plano.md). Como ler IDs e aceitação: [docs/LEITURA.md](../LEITURA.md).
 

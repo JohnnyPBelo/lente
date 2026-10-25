@@ -45,6 +45,7 @@ O plano de origem não chega a estas regras. Ficam escritas como ADRs, para o re
 5. `docs/arquitetura/`, `docs/dados/`, `docs/modelos/`, `docs/interface/`, `docs/estrutura/`
 6. `docs/planos/` na ordem `PLN-01` … `PLN-21`
 7. `docs/rastreio/matriz.md`
+8. `docs/desenvolvimento/` antes de escrever código
 
 ## Exemplos sintéticos
 

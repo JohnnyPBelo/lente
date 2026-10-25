@@ -2,7 +2,7 @@
 
 Chat de pesquisa local com prova na página. Corre no browser em `127.0.0.1:4317`, no mesmo processo que o motor. Windows, macOS e Linux. Alvo: 16 GB de RAM, com ou sem GPU, o mesmo código.
 
-Este repositório, neste marco, contém a **especificação**: o plano aceite, decisões, requisitos, arquitectura, dados, modelos, interface, estrutura futura e planos de implementação. A aplicação ainda não está aqui.
+Este repositório contém a especificação completa no ramo `main`. A aplicação ainda não está aqui. Quem for implementar começa por [docs/desenvolvimento/](docs/desenvolvimento/).
 
 ## O que a app faz
 
@@ -32,15 +32,16 @@ Pesos ficam fora deste git. Se o download Hugging Face falhar por licença, a ap
 | --- | --- |
 | [docs/origem/](docs/origem/) | Plano aceite (cópia integral do zip de 24–25 out 2026) |
 | [docs/LEITURA.md](docs/LEITURA.md) | Como ler IDs, regra de aceitação, decisões de fecho |
-| `docs/decisoes/` | ADRs (pull request) |
-| `docs/requisitos/` | Requisitos numerados (pull request) |
-| `docs/arquitetura/` | Processos, fluxos, orçamento, falhas (pull request) |
-| `docs/dados/` | Esquema SQLite e JSON Schema (pull request) |
-| `docs/modelos/` | Fichas, prefixos, portas, lentes, confronto (pull request) |
-| `docs/interface/` | Chrome, barra, leitor, copy (pull request) |
-| `docs/estrutura/` | Árvore futura, módulos, contrato HTTP (pull request) |
-| `docs/planos/` | 21 planos de implementação (pull request) |
-| `docs/rastreio/` | Matriz origem → requisitos → planos (pull request) |
+| [docs/decisoes/](docs/decisoes/) | ADRs aceites |
+| [docs/requisitos/](docs/requisitos/) | Requisitos numerados, com critérios Dado / Quando / Então |
+| [docs/arquitetura/](docs/arquitetura/) | Processos, fluxos, orçamento, falhas |
+| [docs/dados/](docs/dados/) | Esquema SQLite e JSON Schema |
+| [docs/modelos/](docs/modelos/) | Fichas, prefixos, portas, lentes, confronto |
+| [docs/interface/](docs/interface/) | Chrome, barra, leitor, copy |
+| [docs/estrutura/](docs/estrutura/) | Árvore, módulos, contrato HTTP |
+| [docs/planos/](docs/planos/) | PLN-01 … PLN-21 |
+| [docs/rastreio/](docs/rastreio/) | Matriz origem → requisitos → planos |
+| [docs/desenvolvimento/](docs/desenvolvimento/) | Arranque: ambiente, ondas, pacotes, convenções |
 
 ## Licença
 
