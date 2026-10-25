@@ -6,9 +6,6 @@
   "engines": {
     "node": ">=22"
   },
-  "bin": {
-    "vitest": "./scripts/vitest-raiz.mjs"
-  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
