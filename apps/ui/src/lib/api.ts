@@ -131,11 +131,8 @@ export async function renomearConversa(
 }
 
 export async function apagarConversa(id: string): Promise<void> {
-  const remoto = await pedir<null>(`/chats/${id}`, { method: "DELETE" });
-  if (remoto !== null && !usarFalso) {
-    return;
-  }
   if (!usarFalso) {
+    await pedir<null>(`/chats/${id}`, { method: "DELETE" });
     return;
   }
   chats = chats.filter((c) => c.id !== id);
