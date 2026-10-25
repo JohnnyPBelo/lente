@@ -35,12 +35,10 @@ tests/feedback/test_lora_gate.py::test_reg_fbk_008
 tests/feedback/test_lora_gate.py::test_reg_fbk_009
 tests/feedback/test_lora_gate.py::test_reg_fbk_010
 tests/feedback/test_lora_gate.py::test_reg_for_007
-
 tests/pesquisa/test_rrf.py::test_reg_bus_004
 tests/pesquisa/test_literal.py::test_reg_bus_007
 tests/pesquisa/test_limiar_platt.py::test_reg_bus_010
 tests/pesquisa/test_feedback_runtime.py::test_reg_fbk_007
-
 tests/embeddings/test_cortar.py::test_reg_ing_010
 tests/embeddings/test_miniatura.py::test_reg_ing_011
 tests/embeddings/test_embedding_dim.py::test_reg_bus_001
@@ -52,7 +50,6 @@ tests/pesquisa/test_cosseno_exacto.py::test_reg_bus_005
 tests/pesquisa/test_mesmo_ficheiro.py::test_reg_bus_006
 tests/pesquisa/test_escala_exacta.py::test_reg_des_001
 tests/pesquisa/test_sem_ann.py::test_reg_for_001
-
 apps/ui/src/components/aprendizagem/reg-bar-012.test.tsx
 tests/feedback/test_export_import.py::test_reg_fbk_011
 tests/feedback/test_export_import.py::test_reg_fbk_012
@@ -64,7 +61,6 @@ apps/ui/src/components/aprendizagem/reg-fbk-017.test.tsx
 tests/feedback/test_export_import.py::test_reg_fbk_018
 tests/feedback/test_export_import.py::test_reg_seg_004
 tests/feedback/test_export_import.py::test_reg_for_003
-
 tests/alertas/test_criar.py::test_reg_ale_001
 tests/alertas/test_limite.py::test_reg_ale_002
 apps/ui/src/components/alertas/reg-ale-003.test.tsx
@@ -86,6 +82,15 @@ tests/resposta/test_visita.py::test_reg_res_010
 tests/resposta/test_sem_e2b_modos.py::test_reg_res_011
 tests/resposta/test_sem_bf16.py::test_reg_mod_006
 tests/resposta/test_prompt.py::test_reg_for_006
+tests/biblioteca/test_etiquetas.py::test_reg_bib_001
+tests/biblioteca/test_etiquetas.py::test_reg_bib_002
+tests/diario/test_append.py::test_reg_dia_001
+tests/diario/test_append.py::test_reg_dia_002
+tests/backup/test_zip_data.py::test_reg_bak_001
+tests/backup/test_zip_data.py::test_reg_bak_002
+tests/backup/test_zip_data.py::test_reg_seg_005
+apps/ui/src/components/biblioteca/reg-bib-003.test.tsx
+apps/ui/src/components/biblioteca/reg-des-002.test.tsx
 tests/api/test_chat_nome.py::test_reg_cht_002
 tests/api/test_bind.py::test_reg_seg_002
 tests/api/test_chat_procurar.py::test_reg_http_001
