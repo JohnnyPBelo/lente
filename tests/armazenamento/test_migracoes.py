@@ -48,7 +48,7 @@ def test_reg_mig_001(caminho_tmp: Path) -> None:
                 "offset_inicio, offset_fim, tokens_aprox"
                 ") VALUES (999, 999, 0, 'x', 0, 1, 1)"
             )
-            ligacao.commit()
+        ligacao.rollback()
 
         # CHECK de estado em documentos.
         for estado_invalido in ("", "pronto", "OK", "indexado"):
@@ -60,7 +60,7 @@ def test_reg_mig_001(caminho_tmp: Path) -> None:
                     " '2026-01-01T00:00:00Z')",
                     (f"/tmp/invalido-{estado_invalido or 'vazio'}", estado_invalido),
                 )
-                ligacao.commit()
+            ligacao.rollback()
 
         for estado_ok in ("ok", "desactualizado", "a_indexar", "erro"):
             ligacao.execute(
