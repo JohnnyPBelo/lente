@@ -64,3 +64,12 @@ apps/ui/src/components/aprendizagem/reg-fbk-017.test.tsx
 tests/feedback/test_export_import.py::test_reg_fbk_018
 tests/feedback/test_export_import.py::test_reg_seg_004
 tests/feedback/test_export_import.py::test_reg_for_003
+
+tests/alertas/test_criar.py::test_reg_ale_001
+tests/alertas/test_limite.py::test_reg_ale_002
+apps/ui/src/components/alertas/reg-ale-003.test.tsx
+tests/alertas/test_criar.py::test_reg_ale_004
+tests/alertas/test_avaliar_novo.py::test_reg_ale_005
+tests/alertas/test_avaliar_novo.py::test_reg_ale_006
+apps/ui/src/components/alertas/reg-ale-007.test.tsx
+tests/alertas/test_avaliar_novo.py::test_reg_for_002
