@@ -152,6 +152,8 @@ apps/ui/src/a11y/reg-a11-001.test.tsx
 apps/ui/src/a11y/reg-seg-003.test.tsx
 tests/runtime/test_sem_contas.py::test_reg_for_008
 tests/runtime/test_sem_contas.py::test_reg_for_009
+tests/regressao/test_suite.py::test_reg_fbk_001
+tests/regressao/test_suite.py::test_reg_fbk_003
+tests/regressao/test_suite.py::test_cobertura_toda_agora
 apps/ui/src/components/chat/reg-fbk-001.test.tsx
 apps/ui/src/components/chat/reg-fbk-003.test.tsx
-tests/regressao/test_suite.py::test_cobertura_toda_agora

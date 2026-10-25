@@ -76,6 +76,23 @@ def test_plano_origem_e_buracos() -> None:
     apoio.plano_e_buracos()
 
 
+
+
+def test_reg_fbk_001() -> None:
+    """REG-FBK-001: copy das acções Acertou / Corrigir / Descartar existe."""
+    texto = (apoio.raiz() / "docs" / "interface" / "copy.md").read_text(encoding="utf-8")
+    for chave in ("feedback.hit", "feedback.fix", "feedback.dismiss"):
+        assert chave in texto, f"Falta {chave} em copy.md"
+    assert "Acertou" in texto and "Corrigir" in texto and "Descartar" in texto
+
+
+def test_reg_fbk_003() -> None:
+    """REG-FBK-003: link discreto para corrigir mais tarde na copy."""
+    texto = (apoio.raiz() / "docs" / "interface" / "copy.md").read_text(encoding="utf-8")
+    assert "feedback.fix_later" in texto
+    assert "Corrigir mais tarde" in texto
+
+
 def test_cobertura_toda_agora() -> None:
     """Cada REQ tem linha agora e o REG correspondente está no manifesto."""
     requisitos = apoio.requisitos_dos_ficheiros()
