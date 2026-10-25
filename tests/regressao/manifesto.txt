@@ -13,4 +13,9 @@ tests/ingestao/test_texto_md_docx.py::test_reg_ing_002
 tests/ingestao/test_texto_md_docx.py::test_reg_ing_003
 tests/ingestao/test_texto_md_docx.py::test_reg_ing_004
 tests/ingestao/test_hash.py::test_reg_ing_008
+tests/escalonador/test_fila.py::test_reg_ing_009
+tests/escalonador/test_slot.py::test_reg_bus_012
+tests/escalonador/test_nucleos.py::test_reg_mod_003
+tests/escalonador/test_estados.py::test_reg_mod_004
+tests/escalonador/test_orcamento.py::test_reg_des_003
 tests/ingestao/test_pdf_texto_caixas.py::test_reg_ing_005
