@@ -101,6 +101,40 @@ export const copy = {
     tags: "Etiquetas",
     filter_type: "Tipo de documento",
   },
+  vazios: {
+    biblioteca: {
+      titulo: "Biblioteca vazia",
+      corpo:
+        "Ainda não há ficheiros. Acrescenta documentos para poderes procurar com prova na página.",
+    },
+    modelo: {
+      titulo: "A descarregar o modelo",
+      corpo:
+        "A app continua utilizável; a prosa completa precisa deste modelo. Se a licença bloquear o download, coloca o ficheiro em: {caminho}.",
+    },
+    prosa: {
+      titulo: "Sem prosa verificada",
+      corpo:
+        "Nenhuma frase passou as duas portas. Podes abrir os excertos e as miniaturas.",
+    },
+    pagina: {
+      titulo: "Página sem texto",
+      corpo:
+        "Não há texto útil nesta página. Se for um scan, confirma o OCR na indexação.",
+    },
+    url: {
+      titulo: "URL recusada",
+      corpo: "Este endereço não é aceite (privado ou bloqueado).",
+    },
+    conversa: {
+      titulo: "Nova conversa",
+      corpo: "Escreve a primeira procura na barra em baixo.",
+    },
+    procura: {
+      titulo: "Sem documentos",
+      corpo: "Não há documentos acima do limiar para esta procura.",
+    },
+  },
   reader: {
     zoom_in: "Ampliar",
     zoom_out: "Reduzir",

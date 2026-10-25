@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Comando único: sobe UI + motor em 127.0.0.1:4317 (ADR-013 / PLN-21).
+set -euo pipefail
+raiz="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$raiz"
+export PYTHONPATH="${raiz}${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m engine.cli "$@"

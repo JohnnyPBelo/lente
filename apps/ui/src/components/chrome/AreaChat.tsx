@@ -1,6 +1,6 @@
 import { Mensagem } from "./Mensagem";
-import { copy } from "../../lib/copy";
 import type { MensagemFalsa } from "../../lib/api";
+import { ConversaNova } from "../vazios/ConversaNova";
 
 export type AreaChatProps = {
   mensagens?: MensagemFalsa[];
@@ -14,8 +14,7 @@ export function AreaChat({ mensagens = [], vazia }: AreaChatProps) {
     <section className="area-chat" aria-live="polite">
       {mostrarVazio ? (
         <div className="area-chat__vazio">
-          <h1>{copy.chat.empty_title}</h1>
-          <p>{copy.chat.empty_body}</p>
+          <ConversaNova />
         </div>
       ) : (
         <div className="area-chat__fio">

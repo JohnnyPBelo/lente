@@ -2,7 +2,27 @@
 
 Chat de pesquisa local com prova na página. Corre no browser em `127.0.0.1:4317`, no mesmo processo que o motor. Windows, macOS e Linux. Alvo: 16 GB de RAM, com ou sem GPU, o mesmo código.
 
-Este repositório contém a especificação completa no ramo `main`. A aplicação ainda não está aqui. Quem for implementar começa por [docs/desenvolvimento/](docs/desenvolvimento/).
+Quem for implementar ou correr localmente começa por [docs/desenvolvimento/](docs/desenvolvimento/).
+
+## Como correr
+
+Piso: **Python 3.11+**, **Node 22** (só para construir a UI), **16 GB** de RAM, Tesseract.
+
+```bash
+# 1. Dependências do motor
+python3 -m pip install -r requirements.txt
+
+# 2. Construir a UI (Node 22; não fica a correr depois)
+cd apps/ui && npm ci && npm run build && cd ../..
+
+# 3. Um comando sobe UI + motor em 127.0.0.1:4317
+./scripts/lente
+# ou: python3 -m engine.cli
+```
+
+Abre `http://127.0.0.1:4317`. Sem argumentos o porto é **4317**; só escuta em **127.0.0.1**.
+
+Os pesos ficam em `models/` (fora do git). Se o Hugging Face bloquear o download, a app **abre na mesma** e em `/models/guidance` (e no estado «A descarregar o modelo») indica onde pôr o ficheiro — por exemplo `models/embeddinggemma-2`, `models/juiz`, `models/e2b`. Sem o E2B o chat segue com excertos e miniaturas.
 
 ## O que a app faz
 
