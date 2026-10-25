@@ -14,7 +14,7 @@ git config core.hooksPath scripts/githooks
 
 Este repositório não define `core.hooksPath`. A porta que impede integração é o workflow.
 
-Se a API de protecção de ramos recusar o check obrigatório, o comando a repetir (com permissão de administrador no repositório) é:
+O ramo `main` exige o check `regressao`, com o ramo actualizado face a `main` (`strict`). O comando que define essa protecção é:
 
 ```bash
 gh api -X PUT repos/JohnnyPBelo/lente/branches/main/protection \
