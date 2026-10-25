@@ -1,0 +1,253 @@
+"""Orquestra documento → blocos / frases / vectores e miniatura."""
+
+from __future__ import annotations
+
+import sqlite3
+import struct
+import zlib
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Callable, Sequence
+
+from engine.embeddings.carregar import (
+    DIMENSAO,
+    SessaoEmbedding,
+    embutir,
+)
+from engine.embeddings.cortar import BlocoCortado, cortar_blocos
+from engine.embeddings.frases import FraseSegmentada, segmentar_frases
+from engine.embeddings.prefixos import prefixo_documento
+from engine.ingestao.caixas import Caixa, caixas_para_json
+
+
+@dataclass(frozen=True)
+class ResultadoIndexacao:
+    """Resumo após indexar um documento na BD."""
+
+    documento_id: int
+    blocos: int
+    frases: int
+    miniatura_caminho: str | None
+
+
+def guardar_vector(
+    ligacao: sqlite3.Connection,
+    bloco_id: int,
+    vec: Sequence[float],
+) -> None:
+    """Persiste o vector 256d (BLOB float32 LE) até o PLN-07 ligar sqlite-vec."""
+    if len(vec) != DIMENSAO:
+        raise ValueError(f"vector tem de ter {DIMENSAO} dimensões, não {len(vec)}")
+    blob = struct.pack(f"<{DIMENSAO}f", *[float(x) for x in vec])
+    ligacao.execute(
+        "CREATE TABLE IF NOT EXISTS vectores ("
+        "bloco_id INTEGER PRIMARY KEY REFERENCES blocos (id) ON DELETE CASCADE, "
+        "dimensoes INTEGER NOT NULL, "
+        "embedding BLOB NOT NULL"
+        ")"
+    )
+    ligacao.execute(
+        "INSERT OR REPLACE INTO vectores (bloco_id, dimensoes, embedding) "
+        "VALUES (?, ?, ?)",
+        (bloco_id, DIMENSAO, blob),
+    )
+
+
+def gerar_miniatura(
+    destino: Path | str,
+    *,
+    renderizar_pagina: Callable[[], bytes] | None = None,
+) -> Path:
+    """Grava uma imagem pequena uma vez; ``renderizar_pagina`` só corre se preciso."""
+    caminho = Path(destino)
+    if caminho.is_file():
+        return caminho
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    dados = renderizar_pagina() if renderizar_pagina is not None else construir_png_miniatura()
+    caminho.write_bytes(dados)
+    return caminho
+
+
+def obter_miniatura_indexada(
+    caminho: Path | str,
+    *,
+    renderizar_pdf: Callable[..., bytes] | None = None,
+) -> bytes:
+    """Lê a miniatura persistida; nunca re-renderiza o PDF no hover."""
+    del renderizar_pdf
+    return Path(caminho).read_bytes()
+
+
+def indexar_documento(
+    ligacao: sqlite3.Connection,
+    *,
+    documento_id: int,
+    texto: str,
+    titulo: str | None,
+    sessao: SessaoEmbedding,
+    tokenizador: Any,
+    hash_id: int | None = None,
+    caixas_por_intervalo: list[tuple[int, int, list[Caixa]]] | None = None,
+    pasta_miniaturas: Path | str | None = None,
+    pagina_visualizavel: bool = False,
+    renderizar_pagina: Callable[[], bytes] | None = None,
+) -> ResultadoIndexacao:
+    """Corta, segmenta, embute e grava blocos/frases/vectores (+ miniatura)."""
+    if hash_id is None:
+        linha = ligacao.execute(
+            "SELECT id FROM documento_hashes "
+            "WHERE documento_id = ? AND activa = 1",
+            (documento_id,),
+        ).fetchone()
+        if linha is None:
+            raise LookupError(f"hash activa em falta para documento {documento_id}")
+        hash_id = int(linha[0] if not hasattr(linha, "keys") else linha["id"])
+
+    blocos = cortar_blocos(texto, tokenizador=tokenizador)
+    total_frases = 0
+    miniatura_caminho: str | None = None
+
+    for bloco in blocos:
+        entrada = prefixo_documento(titulo, bloco.texto)
+        vector = embutir(entrada, sessao=sessao)
+        bloco_id = _inserir_bloco(
+            ligacao,
+            documento_id=documento_id,
+            hash_id=hash_id,
+            bloco=bloco,
+        )
+        guardar_vector(ligacao, bloco_id, vector)
+
+        locais = _caixas_relativas_ao_bloco(bloco, caixas_por_intervalo or [])
+        frases = segmentar_frases(
+            bloco.texto,
+            offset_base=bloco.offset_inicio,
+            caixas_por_intervalo=locais,
+        )
+        for frase in frases:
+            _inserir_frase(
+                ligacao,
+                documento_id=documento_id,
+                bloco_id=bloco_id,
+                frase=frase,
+            )
+            total_frases += 1
+
+    if pagina_visualizavel and pasta_miniaturas is not None:
+        destino = Path(pasta_miniaturas) / f"doc_{documento_id}_p1.png"
+        gerado = gerar_miniatura(destino, renderizar_pagina=renderizar_pagina)
+        miniatura_caminho = str(gerado)
+        ligacao.execute(
+            "UPDATE documentos SET miniatura_caminho = ? WHERE id = ?",
+            (miniatura_caminho, documento_id),
+        )
+
+    ligacao.commit()
+    return ResultadoIndexacao(
+        documento_id=documento_id,
+        blocos=len(blocos),
+        frases=total_frases,
+        miniatura_caminho=miniatura_caminho,
+    )
+
+
+def construir_png_miniatura(largura: int = 32, altura: int = 32) -> bytes:
+    """PNG cinzento pequeno sem Pillow (CI só instala pytest)."""
+
+    def chunk(tipo: bytes, dados: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(dados))
+            + tipo
+            + dados
+            + struct.pack(">I", zlib.crc32(tipo + dados) & 0xFFFFFFFF)
+        )
+
+    ihdr = struct.pack(">IIBBBBB", largura, altura, 8, 2, 0, 0, 0)
+    linhas = b"".join(
+        b"\x00" + bytes([160, 160, 160]) * largura for _ in range(altura)
+    )
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", ihdr)
+        + chunk(b"IDAT", zlib.compress(linhas, 9))
+        + chunk(b"IEND", b"")
+    )
+
+
+def _inserir_bloco(
+    ligacao: sqlite3.Connection,
+    *,
+    documento_id: int,
+    hash_id: int,
+    bloco: BlocoCortado,
+) -> int:
+    cur = ligacao.execute(
+        "INSERT INTO blocos ("
+        "documento_id, hash_id, ordem, texto, "
+        "pagina_inicio, pagina_fim, offset_inicio, offset_fim, tokens_aprox"
+        ") VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?)",
+        (
+            documento_id,
+            hash_id,
+            bloco.ordem,
+            bloco.texto,
+            bloco.offset_inicio,
+            bloco.offset_fim,
+            bloco.tokens_aprox,
+        ),
+    )
+    return int(cur.lastrowid)
+
+
+def _inserir_frase(
+    ligacao: sqlite3.Connection,
+    *,
+    documento_id: int,
+    bloco_id: int,
+    frase: FraseSegmentada,
+) -> int:
+    cur = ligacao.execute(
+        "INSERT INTO frases ("
+        "bloco_id, documento_id, pagina, texto, "
+        "offset_inicio, offset_fim, caixas_json, ordem"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            bloco_id,
+            documento_id,
+            frase.pagina,
+            frase.texto,
+            frase.offset_inicio,
+            frase.offset_fim,
+            caixas_para_json(frase.caixas),
+            frase.ordem,
+        ),
+    )
+    return int(cur.lastrowid)
+
+
+def _caixas_relativas_ao_bloco(
+    bloco: BlocoCortado,
+    intervalos: list[tuple[int, int, list[Caixa]]],
+) -> list[tuple[int, int, list[Caixa]]]:
+    saida: list[tuple[int, int, list[Caixa]]] = []
+    for i0, i1, caixas in intervalos:
+        if i1 <= bloco.offset_inicio or i0 >= bloco.offset_fim:
+            continue
+        saida.append(
+            (
+                max(0, i0 - bloco.offset_inicio),
+                min(len(bloco.texto), i1 - bloco.offset_inicio),
+                caixas,
+            )
+        )
+    return saida
+
+
+__all__ = [
+    "ResultadoIndexacao",
+    "construir_png_miniatura",
+    "gerar_miniatura",
+    "guardar_vector",
+    "indexar_documento",
+    "obter_miniatura_indexada",
+]
