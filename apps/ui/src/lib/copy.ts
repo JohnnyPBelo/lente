@@ -14,13 +14,7 @@ export const copy = {
     group: "Conversas",
   },
   learn: {
-    lens: {
-    investigate: "Investigar",
-    assessment: "Assessment",
-    accreditation: "Acreditação",
-    verify: "Verificar",
-  },
-  export: "Exportar correções",
+    export: "Exportar correções",
     import: "Importar correções",
     group: "Aprendizagem",
   },
@@ -37,6 +31,12 @@ export const copy = {
     alert: "Alerta",
     gaps: "Lacunas",
   },
+  lens: {
+    investigate: "Investigar",
+    assessment: "Assessment",
+    accreditation: "Acreditação",
+    verify: "Verificar",
+  },
   bar: {
     placeholder_search: "Pergunta ou termo a procurar",
     correlate_a: "Conceito A",
@@ -49,6 +49,23 @@ export const copy = {
     send: "Enviar",
     menu_hint: "Escolhe um modo",
     threshold: "Limiar",
+  },
+  confront: {
+    reading_agree: "Concordam",
+    reading_contradict: "Contradizem-se",
+    reading_different: "Falam de assuntos diferentes",
+    score: "Pontuação",
+    pick_dim: "Escolhe uma citação ou um trecho fixado",
+  },
+  gaps: {
+    found: "Encontrado",
+    weak: "Fraco",
+    absent: "Ausente",
+  },
+  correlate: {
+    legend_a: "Conceito A",
+    legend_b: "Conceito B",
+    legend_relation: "Relação",
   },
   export: {
     title: "Exportar correções",
@@ -68,7 +85,6 @@ export const copy = {
   chat: {
     empty_title: "Nova conversa",
     empty_body: "Escreve a primeira procura na barra em baixo.",
-    threshold: "Limiar",
     threshold: "Limiar",
     open_source: "Abrir na página",
     dossier: {
