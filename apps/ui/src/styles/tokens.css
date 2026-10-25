@@ -1,0 +1,36 @@
+:root {
+  /* Fundo escuro neutro — sem violeta de default */
+  --lente-fundo: #12141a;
+  --lente-fundo-elevado: #1a1d26;
+  --lente-texto: #e8eaef;
+  --lente-texto-suave: #9aa3b5;
+  --lente-destaque: #c4a574;
+  --lente-perigo: #c47a7a;
+
+  /* Vidro líquido */
+  --lente-vidro-fundo: rgb(26 29 38 / 62%);
+  --lente-vidro-blur: 18px;
+  --lente-vidro-bordo: rgb(255 255 255 / 14%);
+  --lente-vidro-bordo-activo: rgb(255 255 255 / 28%);
+  --lente-vidro-brilho: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 10%) 0%,
+    rgb(255 255 255 / 0%) 42%
+  );
+
+  --lente-fonte-chrome: "Geist", "Geist Fallback", ui-sans-serif, system-ui,
+    sans-serif;
+  --lente-fonte-leitor: "Iowan Old Style", "Palatino Linotype", Palatino,
+    "Book Antiqua", Georgia, serif;
+  --lente-leitor-fundo: #1e2218;
+  --lente-leitor-texto: #e7e2d6;
+  --lente-raio: 6px;
+  --lente-motion: 180ms;
+  --lente-motion-curta: 1ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --lente-motion: 1ms;
+  }
+}

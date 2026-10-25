@@ -47,3 +47,6 @@ Thumbs.db
 *.log
 tmp/
 /tmp/
+
+# symlink local de desenvolvimento
+apps/ui/node_modules
