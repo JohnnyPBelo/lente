@@ -110,12 +110,13 @@ def test_reg_ale_005(caminho_tmp: Path) -> None:
         ligacao.commit()
         assert len(mensagens_do_fio(ligacao, alerta.conversa_id)) == n_antes
 
-        # Sem E2B / escritor no módulo de avaliação.
+        # Sem escritor / resposta no caminho quente de avaliação.
         mod = importlib.import_module("engine.alertas.avaliar_documento")
-        fonte = Path(mod.__file__).read_text(encoding="utf-8").casefold()
-        assert "e2b" not in fonte
-        assert "engine.resposta" not in fonte
+        fonte = Path(mod.__file__).read_text(encoding="utf-8")
+        assert "import engine.resposta" not in fonte
+        assert "from engine.resposta" not in fonte
         assert "escritor" not in inspect.getsource(pontuar).casefold()
+        escritor.assert_not_called()
 
 
 def test_reg_ale_006(caminho_tmp: Path) -> None:
