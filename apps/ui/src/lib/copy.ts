@@ -55,6 +55,12 @@ export const copy = {
   chat: {
     empty_title: "Nova conversa",
     empty_body: "Escreve a primeira procura na barra em baixo.",
+    open_source: "Abrir na página",
+    dossier: {
+      close: "Fechar dossier",
+      reopen: "Reabrir dossier",
+      source_changed: "A fonte mudou depois do fecho; a prova antiga mantém-se",
+    },
   },
   lib: {
     title: "Biblioteca",

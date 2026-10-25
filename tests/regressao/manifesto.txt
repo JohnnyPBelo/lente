@@ -96,3 +96,9 @@ tests/api/test_bind.py::test_reg_seg_002
 tests/api/test_chat_procurar.py::test_reg_http_001
 
 apps/ui/src/components/chrome/reg-cht-001.test.tsx
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_003
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_004
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_005
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_006
+tests/dossier/test_fechar_reabrir.py::test_reg_dos_007
+tests/dossier/test_export.py::test_reg_dos_008
