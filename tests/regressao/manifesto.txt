@@ -40,3 +40,12 @@ tests/pesquisa/test_rrf.py::test_reg_bus_004
 tests/pesquisa/test_literal.py::test_reg_bus_007
 tests/pesquisa/test_limiar_platt.py::test_reg_bus_010
 tests/pesquisa/test_feedback_runtime.py::test_reg_fbk_007
+
+tests/alertas/test_criar.py::test_reg_ale_001
+tests/alertas/test_limite.py::test_reg_ale_002
+apps/ui/src/components/alertas/reg-ale-003.test.tsx
+tests/alertas/test_criar.py::test_reg_ale_004
+tests/alertas/test_avaliar_novo.py::test_reg_ale_005
+tests/alertas/test_avaliar_novo.py::test_reg_ale_006
+apps/ui/src/components/alertas/reg-ale-007.test.tsx
+tests/alertas/test_avaliar_novo.py::test_reg_for_002
