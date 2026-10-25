@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import {
   apagarConversa,
   criarConversa,
+  listarConversas,
   renomearConversa,
   semearConversas,
 } from "../../lib/api";
@@ -45,7 +46,25 @@ export function BarraLateral({
         })),
       );
       setItens(paraItens(conversas));
+      return;
     }
+    let vivo = true;
+    listarConversas()
+      .then((lista) => {
+        if (!vivo) return;
+        setItens(
+          lista.map((c) => ({
+            id: c.id,
+            nome: c.titulo?.trim() || copy.chat.empty_title,
+          })),
+        );
+      })
+      .catch(() => {
+        /* motor indisponível — lista vazia */
+      });
+    return () => {
+      vivo = false;
+    };
   }, [conversas]);
 
   useEffect(() => {

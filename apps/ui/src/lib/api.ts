@@ -1,4 +1,4 @@
-/** Cliente HTTP local. Em testes e sem motor: respostas falsas em memória. */
+/** Cliente HTTP local. Em testes: respostas falsas; em build/runtime: motor real. */
 
 export type LentePedido =
   | "investigar"
@@ -6,12 +6,37 @@ export type LentePedido =
   | "acreditacao"
   | "verificar";
 
+/** Origem do motor que serve a UI (mesmo porto que o browser). */
+export function baseUrl(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    const origem = window.location.origin;
+    if (origem && origem !== "null" && !origem.startsWith("file:")) {
+      return origem;
+    }
+  }
+  return "http://127.0.0.1:4317";
+}
+
+/** @deprecated Preferir ``baseUrl()`` — qualquer porto do ``engine.cli``. */
 export const BASE_URL = "http://127.0.0.1:4317";
 
 export type ConversaResumo = {
   id: string;
   titulo: string | null;
   actualizado_em?: string;
+};
+
+export type ExcertoMsg = {
+  n: number;
+  documento_id: string;
+  pagina: number;
+  texto?: string;
+};
+
+export type MiniaturaMsg = {
+  documento_id: string;
+  pagina: number;
+  url?: string;
 };
 
 export type MensagemFalsa =
@@ -21,7 +46,8 @@ export type MensagemFalsa =
       papel: "assistente";
       frases?: string[];
       texto?: string;
-      excertos?: { n: number; documento_id: string; pagina: number }[];
+      excertos?: ExcertoMsg[];
+      miniaturas?: MiniaturaMsg[];
     };
 
 type ChatInterno = {
@@ -33,7 +59,8 @@ type ChatInterno = {
 
 let sequencia = 0;
 let chats: ChatInterno[] = [];
-let usarFalso = true;
+/** Em Vitest ``reiniciarApiFalsa`` activa o falso; no build fica o motor real. */
+let usarFalso = false;
 let limiarActual = 0.55;
 let alertasFalsos: { id: string; texto: string; lente: LentePedido }[] = [];
 
@@ -107,13 +134,17 @@ async function pedir<T>(
   if (usarFalso) {
     return null;
   }
-  const resposta = await fetch(`${BASE_URL}${caminho}`, {
+  const cabecalhos: Record<string, string> = {
+    Accept: "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (init?.body != null && !(init.body instanceof FormData)) {
+    cabecalhos["Content-Type"] =
+      cabecalhos["Content-Type"] ?? "application/json";
+  }
+  const resposta = await fetch(`${baseUrl()}${caminho}`, {
     ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers: cabecalhos,
   });
   if (resposta.status === 204) {
     return null;
@@ -237,18 +268,138 @@ export function definirLimiarFalso(valor: number): void {
   limiarActual = valor;
 }
 
+export type ResultadoProcura = {
+  ok: true;
+  lente: LentePedido;
+  mensagem_id?: string;
+  excertos: ExcertoMsg[];
+  miniaturas: MiniaturaMsg[];
+  frases: string[];
+  vazio: boolean;
+};
+
+function parseSse(corpo: string): Record<string, unknown>[] {
+  const eventos: Record<string, unknown>[] = [];
+  for (const bloco of corpo.split("\n\n")) {
+    const linha = bloco
+      .split("\n")
+      .map((l) => l.trim())
+      .find((l) => l.startsWith("data:"));
+    if (!linha) continue;
+    try {
+      eventos.push(JSON.parse(linha.slice(5).trim()) as Record<string, unknown>);
+    } catch {
+      /* ignore */
+    }
+  }
+  return eventos;
+}
+
 export async function procurar(pedido: {
   chat_id: string;
   texto: string;
   lente: LentePedido;
-}): Promise<{ ok: true; lente: LentePedido }> {
-  if (!usarFalso) {
-    await pedir<unknown>("/search", {
-      method: "POST",
-      body: JSON.stringify(pedido),
-    });
+}): Promise<ResultadoProcura> {
+  if (usarFalso) {
+    return {
+      ok: true,
+      lente: pedido.lente,
+      excertos: [],
+      miniaturas: [],
+      frases: [],
+      vazio: true,
+    };
   }
-  return { ok: true, lente: pedido.lente };
+  const resposta = await fetch(`${baseUrl()}/search`, {
+    method: "POST",
+    headers: {
+      Accept: "text/event-stream",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(pedido),
+  });
+  if (!resposta.ok) {
+    throw new Error(`HTTP ${resposta.status} em /search`);
+  }
+  const eventos = parseSse(await resposta.text());
+  const excertos: ExcertoMsg[] = [];
+  const miniaturas: MiniaturaMsg[] = [];
+  const frases: string[] = [];
+  let mensagemId: string | undefined;
+  let vazio = false;
+  for (const ev of eventos) {
+    const tipo = ev.tipo;
+    if (tipo === "excerto") {
+      excertos.push({
+        n: Number(ev.n ?? excertos.length + 1),
+        documento_id: String(ev.documento_id ?? ""),
+        pagina: Number(ev.pagina ?? 1),
+        texto: typeof ev.texto === "string" ? ev.texto : undefined,
+      });
+    } else if (tipo === "miniaturas" && Array.isArray(ev.itens)) {
+      for (const item of ev.itens as MiniaturaMsg[]) {
+        miniaturas.push(item);
+      }
+    } else if (tipo === "frase") {
+      if (typeof ev.texto === "string") frases.push(ev.texto);
+    } else if (tipo === "vazio") {
+      vazio = true;
+    } else if (tipo === "fim" && typeof ev.mensagem_id === "string") {
+      mensagemId = ev.mensagem_id;
+    }
+  }
+  if (!excertos.length && !frases.length) {
+    vazio = true;
+  }
+  return {
+    ok: true,
+    lente: pedido.lente,
+    mensagem_id: mensagemId,
+    excertos,
+    miniaturas,
+    frases,
+    vazio,
+  };
+}
+
+export async function listarBiblioteca(): Promise<
+  {
+    id: string;
+    titulo: string;
+    etiquetas: string[];
+    desactualizado: boolean;
+    tipo_sugerido: string | null;
+  }[]
+> {
+  const remoto = await pedir<{
+    itens: {
+      id: string;
+      titulo: string;
+      etiquetas: string[];
+      desactualizado: boolean;
+      tipo_sugerido: string | null;
+    }[];
+  }>("/library");
+  return remoto?.itens ?? [];
+}
+
+export async function ingerirFicheiro(
+  ficheiro: File,
+): Promise<{ documento_id: string; estado: string }> {
+  if (usarFalso) {
+    return { documento_id: "doc_falso", estado: "ok" };
+  }
+  const corpo = new FormData();
+  corpo.append("ficheiros", ficheiro, ficheiro.name);
+  const resposta = await fetch(`${baseUrl()}/library/ingest`, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+    body: corpo,
+  });
+  if (!resposta.ok) {
+    throw new Error(`HTTP ${resposta.status} em /library/ingest`);
+  }
+  return (await resposta.json()) as { documento_id: string; estado: string };
 }
 
 export async function correlacionar(pedido: {

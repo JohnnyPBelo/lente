@@ -81,6 +81,8 @@ def obter_conversa(
                 item["frases"] = meta["frases"]
             if "excertos" in meta:
                 item["excertos"] = meta["excertos"]
+            if "miniaturas" in meta:
+                item["miniaturas"] = meta["miniaturas"]
             if "texto" in meta:
                 item["texto"] = meta["texto"]
             elif m["conteudo"] and "frases" not in item:
@@ -166,9 +168,11 @@ def gravar_turno_procura(
                 "n": e.get("n"),
                 "documento_id": e.get("documento_id"),
                 "pagina": e.get("pagina"),
+                "texto": e.get("texto"),
             }
             for e in resultado.get("excertos") or []
         ],
+        "miniaturas": list(resultado.get("miniaturas") or []),
     }
     conteudo = "\n".join(meta["frases"]) if meta["frases"] else ""
     cur = ligacao.execute(

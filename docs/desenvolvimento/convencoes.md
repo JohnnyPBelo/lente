@@ -20,7 +20,7 @@ Um ramo por plano, a partir de `main` actualizado: `pln-01-esquema`, `pln-02-tex
 
 ## Superfície
 
-- O servidor escuta em `127.0.0.1`, porto `4317` em utilização normal. Testes usam um porto livre de loopback.
+- O servidor escuta em `127.0.0.1`, porto `4317` em utilização normal. Se estiver ocupado, `python3 -m engine.cli --porta N` (a UI usa a mesma origem). Testes usam um porto livre de loopback.
 - URL de artigo: resolver o nome e recusar loopback, link-local, privado e metadados, também depois de redirect.
 - Hash diferente em disco marca o documento desactualizado. A resposta não usa o índice velho em silêncio.
 - Correcções importadas não treinam antes de confirmação. O ecrã de exportação diz que os trechos saem da máquina.
