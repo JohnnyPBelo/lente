@@ -18,3 +18,4 @@ tests/escalonador/test_slot.py::test_reg_bus_012
 tests/escalonador/test_nucleos.py::test_reg_mod_003
 tests/escalonador/test_estados.py::test_reg_mod_004
 tests/escalonador/test_orcamento.py::test_reg_des_003
+tests/ingestao/test_pdf_texto_caixas.py::test_reg_ing_005
