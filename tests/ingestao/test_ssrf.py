@@ -88,3 +88,36 @@ def test_reg_seg_001() -> None:
 
     with pytest.raises(UrlRecusada):
         validar_url("http://user:pass@exemplo.test/", resolver=_resolver_publico)
+
+
+def test_transporte_urllib_nao_segue_redirect_privado(monkeypatch: pytest.MonkeyPatch) -> None:
+    """REG: ``_transporte_urllib`` devolve 302 sem abrir o destino privado."""
+    from email.message import Message
+    from io import BytesIO
+    from urllib.error import HTTPError
+
+    from engine.ingestao import url as url_mod
+
+    class _Opener:
+        def open(self, pedido: object, timeout: float = 0) -> object:
+            del timeout
+            url_pedido = str(getattr(pedido, "full_url", pedido))
+            assert "127.0.0.1" not in url_pedido
+            cab = Message()
+            cab["Location"] = "http://127.0.0.1/segredo"
+            raise HTTPError(
+                "http://exemplo.test/origem",
+                302,
+                "Found",
+                cab,
+                BytesIO(b""),
+            )
+
+    monkeypatch.setattr(url_mod, "build_opener", lambda *_a, **_k: _Opener())
+
+    with pytest.raises(UrlRecusada) as ctx:
+        obter_texto_url(
+            "http://exemplo.test/origem",
+            resolver=_resolver_publico,
+        )
+    assert ctx.value.codigo == "url_privada"

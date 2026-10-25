@@ -228,7 +228,8 @@ export function App() {
               }}
             />
             <BarraEscrita
-              chatId={conversaActivaId ?? "cht_01"}
+              chatId={conversaActivaId}
+              onGarantirChat={garantirConversa}
               onResultado={(r) => {
                 void aoResultado(r);
               }}

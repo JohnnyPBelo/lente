@@ -18,7 +18,8 @@ class HitFts:
     texto: str
 
 
-_TOKEN = re.compile(r"[0-9A-Za-z_]+")
+# Letras Unicode (pt), dígitos e ``_``; hífen parte tokens (CVE-… → AND).
+_TOKEN = re.compile(r"\w+", re.UNICODE)
 
 
 def _consulta_segura(termo: str) -> str:

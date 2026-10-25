@@ -8,6 +8,7 @@ from typing import Any, Callable
 
 from engine.api.ids import doc_id
 from engine.armazenamento.repositorio import abrir
+from engine.ingestao.indexar_minimo import url_miniatura
 from engine.pesquisa.fts import procurar_fts
 
 MotorProcura = Callable[..., dict[str, Any]]
@@ -59,6 +60,20 @@ def _offsets_e_pagina(
     return {"inicio": 0, "fim": len(hit.texto or "")}, 1
 
 
+def _url_miniatura_doc(
+    ligacao: sqlite3.Connection, documento_numero: int, pagina: int
+) -> str:
+    linha = ligacao.execute(
+        "SELECT miniatura_caminho FROM documentos WHERE id = ?",
+        (documento_numero,),
+    ).fetchone()
+    if linha is not None and linha["miniatura_caminho"]:
+        nome = Path(str(linha["miniatura_caminho"])).name
+        if nome:
+            return f"/media/thumbs/{nome}"
+    return url_miniatura(documento_numero, pagina)
+
+
 def motor_procura_fts(caminho_sqlite: Path | str) -> MotorProcura:
     """Procura lexical no mesmo SQLite; sem embeddings/juiz (modelos ausentes)."""
 
@@ -88,7 +103,8 @@ def motor_procura_fts(caminho_sqlite: Path | str) -> MotorProcura:
                 continue
             vistos_texto.add(chave)
             offsets, pagina = _offsets_e_pagina(ligacao, hit)
-            documento = doc_id(int(hit.documento_id))
+            numero = int(hit.documento_id)
+            documento = doc_id(numero)
             excertos.append(
                 {
                     "n": len(excertos) + 1,
@@ -106,7 +122,7 @@ def motor_procura_fts(caminho_sqlite: Path | str) -> MotorProcura:
                     {
                         "documento_id": documento,
                         "pagina": pagina,
-                        "url": "",
+                        "url": _url_miniatura_doc(ligacao, numero, pagina),
                     }
                 )
             if len(excertos) >= 20:

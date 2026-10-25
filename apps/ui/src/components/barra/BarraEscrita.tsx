@@ -16,6 +16,7 @@ import {
   correlacionar,
   confrontar,
   criarAlerta,
+  criarConversa,
   lacunas,
   obterLimiar,
   procurar,
@@ -56,7 +57,9 @@ export type ResultadoBarra =
     };
 
 export type BarraEscritaProps = {
-  chatId?: string;
+  chatId?: string | null;
+  /** Garante conversa real antes de POST /search (evita cht_01 fantasma). */
+  onGarantirChat?: () => Promise<string>;
   onResultado?: (r: ResultadoBarra) => void;
   onAbrirCitacao?: (doc: {
     documento_id: string;
@@ -69,7 +72,8 @@ export type BarraEscritaProps = {
 const VAZIO: TrechoBarra = { texto: "" };
 
 export function BarraEscrita({
-  chatId = "cht_01",
+  chatId = null,
+  onGarantirChat,
   onResultado,
   onAbrirCitacao,
   trechoConfrontarExterno = null,
@@ -153,12 +157,23 @@ export function BarraEscrita({
     };
   }, []);
 
+  async function idChatEfectivo(): Promise<string> {
+    if (chatId) return chatId;
+    if (onGarantirChat) return onGarantirChat();
+    // Sem App (testes / barra isolada): cria conversa real antes do POST.
+    const criada = await criarConversa(null);
+    return criada.id;
+  }
+
   async function enviar() {
+    const idChat = await idChatEfectivo();
+    if (!idChat) return;
+
     if (modo === "procurar") {
       const t = texto.trim();
       if (!t) return;
       const lim = limiar ?? (await obterLimiar());
-      const resposta = await procurar({ chat_id: chatId, texto: t, lente });
+      const resposta = await procurar({ chat_id: idChat, texto: t, lente });
       onResultado?.({
         tipo: "procurar",
         texto: t,
@@ -172,7 +187,7 @@ export function BarraEscrita({
     if (modo === "correlacionar") {
       if (!conceitoA.trim() || !conceitoB.trim()) return;
       const resposta = await correlacionar({
-        chat_id: chatId,
+        chat_id: idChat,
         conceito_a: conceitoA.trim(),
         conceito_b: conceitoB.trim(),
         lente,
@@ -189,7 +204,7 @@ export function BarraEscrita({
     if (modo === "confrontar") {
       if (!trechoA.texto.trim() || !trechoB.texto.trim()) return;
       const resposta = await confrontar({
-        chat_id: chatId,
+        chat_id: idChat,
         trecho_a: trechoA,
         trecho_b: trechoB,
       });
@@ -217,7 +232,7 @@ export function BarraEscrita({
         .filter(Boolean);
       if (!linhas.length) return;
       const resposta = await lacunas({
-        chat_id: chatId,
+        chat_id: idChat,
         linhas,
         lente,
       });

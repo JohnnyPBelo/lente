@@ -402,6 +402,47 @@ export async function ingerirFicheiro(
   return (await resposta.json()) as { documento_id: string; estado: string };
 }
 
+export class ErroIngestao extends Error {
+  readonly codigo: string;
+
+  constructor(codigo: string, mensagem: string) {
+    super(mensagem);
+    this.codigo = codigo;
+  }
+}
+
+export async function ingerirUrl(
+  url: string,
+): Promise<{ documento_id: string; estado: string }> {
+  if (usarFalso) {
+    return { documento_id: "doc_url_falso", estado: "ok" };
+  }
+  const resposta = await fetch(`${baseUrl()}/library/ingest`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url }),
+  });
+  if (!resposta.ok) {
+    let codigo = "pedido_invalido";
+    let mensagem = `HTTP ${resposta.status} em /library/ingest`;
+    try {
+      const corpo = (await resposta.json()) as {
+        erro?: string;
+        mensagem?: string;
+      };
+      if (corpo.erro) codigo = corpo.erro;
+      if (corpo.mensagem) mensagem = corpo.mensagem;
+    } catch {
+      /* corpo não-JSON */
+    }
+    throw new ErroIngestao(codigo, mensagem);
+  }
+  return (await resposta.json()) as { documento_id: string; estado: string };
+}
+
 export async function correlacionar(pedido: {
   chat_id: string;
   conceito_a: string;

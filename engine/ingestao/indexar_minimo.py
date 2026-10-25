@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime, timezone
+from pathlib import Path
 
 from engine.embeddings.frases import segmentar_frases
+from engine.embeddings.indexar import gerar_miniatura
 from engine.pesquisa.fts import indexar_bloco, indexar_frase
 
 
@@ -19,12 +21,23 @@ def _agora() -> str:
     )
 
 
+def nome_ficheiro_miniatura(documento_id: int, pagina: int = 1) -> str:
+    """Nome estável servido em ``/media/thumbs/…``."""
+    return f"doc_{documento_id}_p{pagina}.png"
+
+
+def url_miniatura(documento_id: int, pagina: int = 1) -> str:
+    """URL HTTP da miniatura gerada na indexação."""
+    return f"/media/thumbs/{nome_ficheiro_miniatura(documento_id, pagina)}"
+
+
 def indexar_texto_fts(
     ligacao: sqlite3.Connection,
     *,
     documento_id: int,
     texto: str,
     hash_id: int | None = None,
+    pasta_miniaturas: Path | str | None = None,
 ) -> int:
     """Grava um bloco + frases e popula FTS. Devolve o número de frases."""
     corpo = (texto or "").strip()
@@ -126,10 +139,24 @@ def indexar_texto_fts(
             total += 1
 
     momento = _agora()
-    ligacao.execute(
-        "UPDATE documentos SET estado = 'ok', paginas = 1, "
-        "actualizado_em = ?, indexado_em = ? WHERE id = ?",
-        (momento, momento, documento_id),
-    )
+    miniatura_caminho: str | None = None
+    if pasta_miniaturas is not None:
+        destino = Path(pasta_miniaturas) / nome_ficheiro_miniatura(documento_id, 1)
+        gerado = gerar_miniatura(destino)
+        miniatura_caminho = str(gerado)
+
+    if miniatura_caminho is not None:
+        ligacao.execute(
+            "UPDATE documentos SET estado = 'ok', paginas = 1, "
+            "miniatura_caminho = ?, actualizado_em = ?, indexado_em = ? "
+            "WHERE id = ?",
+            (miniatura_caminho, momento, momento, documento_id),
+        )
+    else:
+        ligacao.execute(
+            "UPDATE documentos SET estado = 'ok', paginas = 1, "
+            "actualizado_em = ?, indexado_em = ? WHERE id = ?",
+            (momento, momento, documento_id),
+        )
     ligacao.commit()
     return total
