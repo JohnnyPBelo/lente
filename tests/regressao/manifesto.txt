@@ -142,3 +142,13 @@ tests/api/test_modos.py::test_reg_confronto_c2_contradizem
 tests/api/test_modos.py::test_reg_confronto_c3_contradizem_fraco
 tests/api/test_modos.py::test_reg_confronto_c4_assuntos_diferentes
 tests/api/test_modos.py::test_reg_confronto_c5_assuntos_medio
+tests/runtime/test_comando_unico.py::test_reg_mod_001
+tests/runtime/test_piso.py::test_reg_mod_002
+tests/runtime/test_comando_unico.py::test_reg_mod_007
+tests/runtime/test_comando_unico.py::test_reg_mod_008
+tests/runtime/test_residentes.py::test_reg_mod_009
+apps/ui/src/components/vazios/reg-vaz-001.test.tsx
+apps/ui/src/a11y/reg-a11-001.test.tsx
+apps/ui/src/a11y/reg-seg-003.test.tsx
+tests/runtime/test_sem_contas.py::test_reg_for_008
+tests/runtime/test_sem_contas.py::test_reg_for_009
