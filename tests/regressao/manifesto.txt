@@ -6,6 +6,7 @@ tests/regressao/test_suite.py::test_cada_req_aparece_uma_vez_na_cobertura
 tests/regressao/test_suite.py::test_reg_agora_estao_no_manifesto
 tests/regressao/test_suite.py::test_nao_ha_pesos_de_modelo_versionados
 tests/regressao/test_suite.py::test_plano_origem_e_buracos
+
 tests/armazenamento/test_migracoes.py::test_reg_mig_001
 tests/ingestao/test_texto_md_docx.py::test_reg_ing_001
 tests/ingestao/test_texto_md_docx.py::test_reg_ing_002
@@ -93,4 +94,5 @@ apps/ui/src/components/biblioteca/reg-des-002.test.tsx
 tests/api/test_chat_nome.py::test_reg_cht_002
 tests/api/test_bind.py::test_reg_seg_002
 tests/api/test_chat_procurar.py::test_reg_http_001
+
 apps/ui/src/components/chrome/reg-cht-001.test.tsx
