@@ -17,18 +17,18 @@
 
 ## Passos
 
-- [ ] Teste limite: 11.º alerta → erro `LimiteAlertas`.
-- [ ] Teste avaliar novo (acima).
-- [ ] Commit: `test(alertas): falha sem avaliação pós-indexação`.
-- [ ] Hook no fim de indexação bem-sucedida de documento novo.
-- [ ] Sem E2B; só juiz + excerto/miniatura.
-- [ ] UI grupo sob conversas; interruptor no fio.
-- [ ] Lente do alerta aplica prefixo (PLN-14).
-- [ ] Fazer passar.
-- [ ] Commit: `feat(alertas): vigia pós-indexação até 10`.
-- [ ] Teste: indexação pausada por procura não perde o gancho — avalia quando a indexação conclui.
-- [ ] Commit: `test(alertas): avaliação após retoma da indexação`.
-- [ ] Commit de fecho.
+- [x] Teste limite: 11.º alerta → erro `LimiteAlertas`.
+- [x] Teste avaliar novo (acima).
+- [x] Commit: `test(alertas): falha sem avaliação pós-indexação`.
+- [x] Hook no fim de indexação bem-sucedida de documento novo.
+- [x] Sem E2B; só juiz + excerto/miniatura.
+- [x] UI grupo sob conversas; interruptor no fio.
+- [x] Lente do alerta aplica prefixo (PLN-14).
+- [x] Fazer passar.
+- [x] Commit: `feat(alertas): vigia pós-indexação até 10`.
+- [x] Teste: indexação pausada por procura não perde o gancho — avalia quando a indexação conclui.
+- [x] Commit: `test(alertas): avaliação após retoma da indexação`.
+- [x] Commit de fecho.
 
 ## Notas para o executor
 
