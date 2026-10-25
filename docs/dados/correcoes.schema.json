@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lente.local/schemas/correcoes.schema.json",
+  "title": "Exportação de correções do juiz — Lente",
+  "description": "Ficheiro partilhável de afinações: não contém pesos LoRA. Inclui versão do formato, id do modelo base e o conjunto de correções (pergunta, trecho, etiqueta, lente, hash do par).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "base_model_id", "corrections"],
+  "properties": {
+    "format_version": {
+      "type": "string",
+      "description": "Versão do formato de exportação de correções.",
+      "const": "1"
+    },
+    "base_model_id": {
+      "type": "string",
+      "description": "Identificador do modelo base do juiz. Importações com base diferente são recusadas.",
+      "minLength": 1
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora UTC da exportação (opcional)."
+    },
+    "corrections": {
+      "type": "array",
+      "description": "Lista de correções. Pares com o mesmo hash_par devem ser tratados como um só na importação.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pergunta", "trecho", "etiqueta", "lente", "hash_par"],
+        "properties": {
+          "pergunta": {
+            "type": "string",
+            "description": "Pergunta (ou reformulação) associada ao feedback."
+          },
+          "trecho": {
+            "type": "string",
+            "description": "Texto do trecho do documento (positivo ou negativo)."
+          },
+          "etiqueta": {
+            "type": "string",
+            "description": "Sinal para o juiz.",
+            "enum": ["positivo", "negativo"]
+          },
+          "lente": {
+            "type": "string",
+            "description": "Lente de trabalho no momento da correção.",
+            "enum": ["investigar", "assessment", "acreditacao", "verificar"]
+          },
+          "hash_par": {
+            "type": "string",
+            "description": "Hash estável do par (pergunta + trecho + etiqueta + lente, ou convenção documentada na implementação).",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
