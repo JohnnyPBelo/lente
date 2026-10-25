@@ -169,8 +169,22 @@ def _funcao_existe(nodeid: str) -> None:
 
 
 def nodeids_recolhidos() -> set[str]:
+    """Recolhe node ids dos ficheiros pytest listados no manifesto.
+
+    O manifesto cresce com testes em ``tests/<pacote>/``, não só em
+    ``tests/regressao/``; a recolha segue esses caminhos.
+    """
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+    ficheiros = sorted(
+        {
+            linha.partition("::")[0]
+            for linha in ler_manifesto()
+            if "::" in linha
+        }
+    )
+    if not ficheiros:
+        return set()
     proc = subprocess.run(
         [
             sys.executable,
@@ -180,7 +194,7 @@ def nodeids_recolhidos() -> set[str]:
             "-q",
             "-p",
             "no:cacheprovider",
-            "tests/regressao",
+            *ficheiros,
         ],
         cwd=raiz(),
         capture_output=True,
