@@ -157,3 +157,4 @@ tests/regressao/test_suite.py::test_reg_fbk_003
 tests/regressao/test_suite.py::test_cobertura_toda_agora
 apps/ui/src/components/chat/reg-fbk-001.test.tsx
 apps/ui/src/components/chat/reg-fbk-003.test.tsx
+tests/api/test_biblioteca_ingest_procura.py::test_ingest_md_e_procura_devolve_excerto

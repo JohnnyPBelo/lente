@@ -19,6 +19,7 @@ import {
   lacunas,
   obterLimiar,
   procurar,
+  type ResultadoProcura,
 } from "../../lib/api";
 import { MenuMais } from "./MenuMais";
 import { PastilhaLente } from "./PastilhaLente";
@@ -30,7 +31,13 @@ import { Lacunas } from "./modos/Lacunas";
 import { Procurar } from "./modos/Procurar";
 
 export type ResultadoBarra =
-  | { tipo: "procurar"; texto: string; lente: LenteId; limiar: number }
+  | {
+      tipo: "procurar";
+      texto: string;
+      lente: LenteId;
+      limiar: number;
+      resposta: ResultadoProcura;
+    }
   | {
       tipo: "correlacionar";
       conceito_a: string;
@@ -151,8 +158,14 @@ export function BarraEscrita({
       const t = texto.trim();
       if (!t) return;
       const lim = limiar ?? (await obterLimiar());
-      await procurar({ chat_id: chatId, texto: t, lente });
-      onResultado?.({ tipo: "procurar", texto: t, lente, limiar: lim });
+      const resposta = await procurar({ chat_id: chatId, texto: t, lente });
+      onResultado?.({
+        tipo: "procurar",
+        texto: t,
+        lente,
+        limiar: lim,
+        resposta,
+      });
       setTexto("");
       return;
     }

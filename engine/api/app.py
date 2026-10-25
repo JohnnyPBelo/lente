@@ -11,7 +11,7 @@ from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Route
 
 from engine.api.estaticos import caminho_dist, montar_estaticos
-from engine.api.motor import motor_procura_sem_e2b
+from engine.api.motor import motor_procura_fts, motor_procura_sem_e2b
 from engine.api.rotas_biblioteca import rotas_biblioteca
 from engine.api.rotas_chat import rotas_chat
 from engine.api.rotas_documento import rotas_documento
@@ -68,6 +68,7 @@ def criar_app(
     slot: SlotPesado | None = None,
     raiz_estaticos: Path | str | None = None,
     raiz_modelos: Path | str | None = None,
+    pasta_uploads: Path | str | None = None,
     forcar_estado_modelos: dict[str, str] | None = None,
     descarregar_modelo: Callable[[str], dict[str, Any]] | None = None,
 ) -> Starlette:
@@ -91,14 +92,26 @@ def criar_app(
     if not tem_dist:
         rotas.append(Route("/", raiz_placeholder, methods=["GET"]))
 
+    if motor_procura is not None:
+        motor = motor_procura
+    elif caminho is not None:
+        motor = motor_procura_fts(caminho)
+    else:
+        motor = motor_procura_sem_e2b
+
+    uploads = Path(pasta_uploads) if pasta_uploads is not None else None
+    if uploads is None and caminho is not None:
+        uploads = caminho.parent / "biblioteca"
+
     app = Starlette(routes=rotas)
     app.state.caminho_sqlite = caminho
-    app.state.motor_procura = motor_procura or motor_procura_sem_e2b
+    app.state.motor_procura = motor
     app.state.com_e2b = com_e2b
     app.state.slot = slot or SlotPesado()
     app.state.raiz_modelos = (
         Path(raiz_modelos) if raiz_modelos is not None else None
     )
+    app.state.pasta_uploads = uploads
     app.state.forcar_estado_modelos = forcar_estado_modelos
     app.state.descarregar_modelo = descarregar_modelo
 

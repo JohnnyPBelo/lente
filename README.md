@@ -20,7 +20,12 @@ cd apps/ui && npm ci && npm run build && cd ../..
 # ou: python3 -m engine.cli
 ```
 
-Abre `http://127.0.0.1:4317`. Sem argumentos o porto é **4317**; só escuta em **127.0.0.1**.
+Abre `http://127.0.0.1:4317`. Sem argumentos o porto é **4317**; só escuta em **127.0.0.1**. Se o 4317 estiver ocupado:
+
+```bash
+python3 -m engine.cli --porta 4320
+# abre http://127.0.0.1:4320 — a UI usa a mesma origem (qualquer porto).
+```
 
 Os pesos ficam em `models/` (fora do git). Se o Hugging Face bloquear o download, a app **abre na mesma** e em `/models/guidance` (e no estado «A descarregar o modelo») indica onde pôr o ficheiro — por exemplo `models/embeddinggemma-2`, `models/juiz`, `models/e2b`. Sem o E2B o chat segue com excertos e miniaturas.
 
