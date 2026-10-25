@@ -1,21 +1,23 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { reiniciarApiFalsa, semearDocumento } from "../../lib/api";
 import { copy } from "../../lib/copy";
 import { Leitor } from "./Leitor";
 
 describe("clip debug", () => {
-  it("writes", async () => {
+  it("writes with prototype redefine", async () => {
     reiniciarApiFalsa();
     const writeText = vi.fn().mockResolvedValue(undefined);
-    // @ts-expect-error test
-    navigator.clipboard = { writeText };
-    console.log(
-      "same ref?",
-      navigator.clipboard.writeText === writeText,
-      Object.getOwnPropertyDescriptor(navigator, "clipboard"),
-    );
+    const clip = { writeText };
+    Object.defineProperty(window.Navigator.prototype, "clipboard", {
+      configurable: true,
+      get() {
+        return clip;
+      },
+    });
+    console.log("same?", navigator.clipboard.writeText === writeText);
+
     semearDocumento(
       {
         id: "doc_c",
@@ -42,9 +44,13 @@ describe("clip debug", () => {
       .dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     const btn = await screen.findByRole("button", { name: copy.reader.copy });
     await user.click(btn);
-    console.log("after click", writeText.mock.calls);
-    await navigator.clipboard.writeText("direct");
-    console.log("after direct", writeText.mock.calls);
-    expect(writeText.mock.calls.length).toBeGreaterThan(0);
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    writeText.mockClear();
+    await user.click(
+      screen.getByRole("button", { name: copy.reader.copy_citation }),
+    );
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const args = writeText.mock.calls.map((c) => String(c[0]));
+    expect(args.some((a) => a.includes("Politica.pdf") && a.includes("p. 1"))).toBe(true);
   });
 });
