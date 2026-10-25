@@ -74,3 +74,21 @@ def test_nao_ha_pesos_de_modelo_versionados() -> None:
 
 def test_plano_origem_e_buracos() -> None:
     apoio.plano_e_buracos()
+
+
+def test_cobertura_toda_agora() -> None:
+    """Cada REQ tem linha agora e o REG correspondente está no manifesto."""
+    requisitos = apoio.requisitos_dos_ficheiros()
+    linhas = apoio.linhas_de_cobertura()
+    assert len(linhas) == len(requisitos)
+    assert {req for req, *_ in linhas} == set(requisitos)
+    manifesto = apoio.ler_manifesto()
+    pendentes = []
+    sem_reg = []
+    for req, reg, _pln, estado in linhas:
+        if estado != "agora":
+            pendentes.append(f"{req}={estado}")
+        if not apoio.manifesto_cobre_reg(reg, manifesto):
+            sem_reg.append(reg)
+    assert not pendentes, f"Linhas ainda pendentes: {pendentes}"
+    assert not sem_reg, f"REG ausentes do manifesto: {sem_reg}"

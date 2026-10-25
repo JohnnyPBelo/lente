@@ -154,3 +154,4 @@ tests/runtime/test_sem_contas.py::test_reg_for_008
 tests/runtime/test_sem_contas.py::test_reg_for_009
 apps/ui/src/components/chat/reg-fbk-001.test.tsx
 apps/ui/src/components/chat/reg-fbk-003.test.tsx
+tests/regressao/test_suite.py::test_cobertura_toda_agora
