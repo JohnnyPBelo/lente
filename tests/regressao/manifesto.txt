@@ -91,7 +91,9 @@ tests/backup/test_zip_data.py::test_reg_bak_002
 tests/backup/test_zip_data.py::test_reg_seg_005
 apps/ui/src/components/biblioteca/reg-bib-003.test.tsx
 apps/ui/src/components/biblioteca/reg-des-002.test.tsx
-
+tests/api/test_chat_nome.py::test_reg_cht_002
+tests/api/test_bind.py::test_reg_seg_002
+tests/api/test_chat_procurar.py::test_reg_http_001
 tests/dossier/test_fechar_reabrir.py::test_reg_dos_003
 tests/dossier/test_fechar_reabrir.py::test_reg_dos_004
 tests/dossier/test_fechar_reabrir.py::test_reg_dos_005
