@@ -25,8 +25,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Instalar o pytest
-        run: python -m pip install pytest
+      - name: Instalar o pytest e sqlite-vec
+        run: python -m pip install pytest sqlite-vec
 
       - name: Correr a suite de regressão
         env:

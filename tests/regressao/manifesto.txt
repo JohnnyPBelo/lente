@@ -22,3 +22,8 @@ tests/ingestao/test_pdf_texto_caixas.py::test_reg_ing_005
 tests/juiz/test_onnx_carga.py::test_reg_jui_001
 tests/juiz/test_pontuar.py::test_reg_jui_002
 tests/juiz/test_sem_outro_decisor.py::test_reg_for_005
+tests/pesquisa/test_fts5.py::test_reg_bus_003
+tests/pesquisa/test_cosseno_exacto.py::test_reg_bus_005
+tests/pesquisa/test_mesmo_ficheiro.py::test_reg_bus_006
+tests/pesquisa/test_escala_exacta.py::test_reg_des_001
+tests/pesquisa/test_sem_ann.py::test_reg_for_001
