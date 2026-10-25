@@ -64,3 +64,7 @@ apps/ui/src/components/aprendizagem/reg-fbk-017.test.tsx
 tests/feedback/test_export_import.py::test_reg_fbk_018
 tests/feedback/test_export_import.py::test_reg_seg_004
 tests/feedback/test_export_import.py::test_reg_for_003
+
+tests/api/test_chat_nome.py::test_reg_cht_002
+tests/api/test_bind.py::test_reg_seg_002
+tests/api/test_chat_procurar.py::test_reg_http_001
