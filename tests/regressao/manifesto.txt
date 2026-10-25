@@ -24,3 +24,4 @@ tests/juiz/test_pontuar.py::test_reg_jui_002
 tests/juiz/test_sem_outro_decisor.py::test_reg_for_005
 tests/ingestao/test_url.py::test_reg_ing_007
 tests/ingestao/test_ssrf.py::test_reg_seg_001
+tests/ingestao/test_ocr.py::test_reg_ing_006
