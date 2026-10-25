@@ -8,6 +8,7 @@ export const copy = {
     close: "Fechar",
     cancel: "Cancelar",
     confirm: "Confirmar",
+    backup: "Cópia de segurança",
   },
   conversations: {
     group: "Conversas",
@@ -54,6 +55,13 @@ export const copy = {
   chat: {
     empty_title: "Nova conversa",
     empty_body: "Escreve a primeira procura na barra em baixo.",
+  },
+  lib: {
+    title: "Biblioteca",
+    add: "Acrescentar ficheiros",
+    outdated: "Desactualizado",
+    tags: "Etiquetas",
+    filter_type: "Tipo de documento",
   },
   a11y: {
     sidebar: "Barra lateral",
