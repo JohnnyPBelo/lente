@@ -18,7 +18,6 @@ def test_reg_bus_012() -> None:
     # --- Indexação pausa e retoma ---
     ticks: list[str] = []
     index_entrou = threading.Event()
-    index_viu_pausa = threading.Event()
     index_concluiu = threading.Event()
     pode_terminar = threading.Event()
 
@@ -27,9 +26,6 @@ def test_reg_bus_012() -> None:
             index_entrou.set()
             ticks.append("index_inicio")
             while not pode_terminar.is_set():
-                if slot.esta_pausado():
-                    ticks.append("index_pausado")
-                    index_viu_pausa.set()
                 slot.ponto_de_pausa()
                 ticks.append("index_activo")
                 time.sleep(0.01)
@@ -42,34 +38,33 @@ def test_reg_bus_012() -> None:
     assert slot.estado_atual() == "index"
 
     with slot.antes_de_procurar():
-        assert index_viu_pausa.wait(2.0), "indexação não observou pausa"
+        # adquirir só regressa depois da indexação ceder o slot
         assert slot.estado_atual() == "paused_for_search"
-        assert "index_pausado" in ticks
-        # Durante a procura a indexação não avança como activa.
+        assert slot.pausas_observadas >= 1
+        assert slot.esta_pausado()
         activos_durante = [x for x in ticks if x == "index_activo"]
         time.sleep(0.05)
         activos_depois = [x for x in ticks if x == "index_activo"]
         assert activos_depois == activos_durante
 
-    assert index_concluiu.wait(0.01) is False  # ainda não terminou sozinha
+    assert index_concluiu.wait(0.01) is False
     pode_terminar.set()
     assert index_concluiu.wait(2.0), "indexação não retomou e concluiu"
     assert ticks[-1] == "index_fim"
+    assert "index_activo" in ticks
     assert slot.estado_atual() == "idle"
 
     # --- LoRA pausa e retoma (procura usa ONNX já activo) ---
     lora_entrou = threading.Event()
-    lora_viu_pausa = threading.Event()
     lora_concluiu = threading.Event()
     lora_pode_terminar = threading.Event()
     onnx_visto: list[str] = []
+    pausas_antes = slot.pausas_observadas
 
     def treinar() -> None:
         with slot.antes_de_lora():
             lora_entrou.set()
             while not lora_pode_terminar.is_set():
-                if slot.esta_pausado():
-                    lora_viu_pausa.set()
                 slot.ponto_de_pausa()
                 time.sleep(0.01)
         lora_concluiu.set()
@@ -80,8 +75,8 @@ def test_reg_bus_012() -> None:
     assert slot.estado_atual() == "lora"
 
     with slot.antes_de_procurar():
-        assert lora_viu_pausa.wait(2.0), "LoRA não observou pausa"
         assert slot.estado_atual() == "paused_for_search"
+        assert slot.pausas_observadas > pausas_antes
         onnx_visto.append(slot.onnx_activo())
     lora_pode_terminar.set()
     assert lora_concluiu.wait(2.0), "LoRA não retomou"
@@ -90,7 +85,6 @@ def test_reg_bus_012() -> None:
 
     # --- Nunca duas procuras pesadas ao mesmo tempo ---
     procura_segura = threading.Event()
-    segunda_falhou = threading.Event()
 
     def primeira_procura() -> None:
         with slot.antes_de_procurar():
@@ -104,6 +98,5 @@ def test_reg_bus_012() -> None:
         with slot.antes_de_procurar():
             pass
     assert str(excinfo.value) == "fila ocupada"
-    segunda_falhou.set()
     t_search.join(2.0)
     assert slot.estado_atual() == "idle"
