@@ -8,6 +8,7 @@ export const copy = {
     close: "Fechar",
     cancel: "Cancelar",
     confirm: "Confirmar",
+    backup: "Cópia de segurança",
   },
   conversations: {
     group: "Conversas",
@@ -60,6 +61,13 @@ export const copy = {
       reopen: "Reabrir dossier",
       source_changed: "A fonte mudou depois do fecho; a prova antiga mantém-se",
     },
+  },
+  lib: {
+    title: "Biblioteca",
+    add: "Acrescentar ficheiros",
+    outdated: "Desactualizado",
+    tags: "Etiquetas",
+    filter_type: "Tipo de documento",
   },
   a11y: {
     sidebar: "Barra lateral",
