@@ -20,8 +20,13 @@
 
   --lente-fonte-chrome: "Geist", "Geist Fallback", ui-sans-serif, system-ui,
     sans-serif;
+  --lente-fonte-leitor: "Iowan Old Style", "Palatino Linotype", Palatino,
+    "Book Antiqua", Georgia, serif;
+  --lente-leitor-fundo: #1e2218;
+  --lente-leitor-texto: #e7e2d6;
   --lente-raio: 6px;
   --lente-motion: 180ms;
+  --lente-motion-curta: 1ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
