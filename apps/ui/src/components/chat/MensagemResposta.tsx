@@ -3,6 +3,7 @@ import { Mensagem } from "../chrome/Mensagem";
 import { LequeLeitor, type DestinoLeitor } from "../leque/LequeLeitor";
 import type { MiniaturaDoc } from "../leque/Miniatura";
 import { CitacaoLink, type DestinoCitacao } from "./CitacaoLink";
+import { LinhaFeedback } from "./LinhaFeedback";
 
 export type FraseCitada = {
   texto: string;
@@ -50,6 +51,10 @@ export function MensagemResposta({
             ) : null}
           </p>
         ))}
+        <LinhaFeedback
+          mensagemId={mensagemId}
+          temHighlights={frases.some((f) => Boolean(f.citacao)) || miniaturas.length > 0}
+        />
         <LequeLeitor
           mensagemId={mensagemId}
           chatId={chatId}

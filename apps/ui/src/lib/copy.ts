@@ -13,6 +13,12 @@ export const copy = {
   conversations: {
     group: "Conversas",
   },
+  feedback: {
+    hit: "Acertou",
+    fix: "Corrigir",
+    dismiss: "Descartar",
+    fix_later: "Corrigir mais tarde",
+  },
   learn: {
     export: "Exportar correções",
     import: "Importar correções",
