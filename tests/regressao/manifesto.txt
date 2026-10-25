@@ -115,3 +115,8 @@ apps/ui/src/components/barra/reg-bar-011.test.tsx
 apps/ui/src/components/barra/reg-a11-002.test.tsx
 apps/ui/src/components/barra/reg-seg-006.test.tsx
 apps/ui/src/components/barra/reg-for-010.test.tsx
+tests/api/test_modos.py::test_reg_confronto_c1_concordam
+tests/api/test_modos.py::test_reg_confronto_c2_contradizem
+tests/api/test_modos.py::test_reg_confronto_c3_contradizem_fraco
+tests/api/test_modos.py::test_reg_confronto_c4_assuntos_diferentes
+tests/api/test_modos.py::test_reg_confronto_c5_assuntos_medio
