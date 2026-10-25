@@ -58,3 +58,5 @@ tests/diario/test_append.py::test_reg_dia_002
 tests/backup/test_zip_data.py::test_reg_bak_001
 tests/backup/test_zip_data.py::test_reg_bak_002
 tests/backup/test_zip_data.py::test_reg_seg_005
+apps/ui/src/components/biblioteca/reg-bib-003.test.tsx
+apps/ui/src/components/biblioteca/reg-des-002.test.tsx
