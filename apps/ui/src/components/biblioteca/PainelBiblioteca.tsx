@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ingerirFicheiro, listarBiblioteca } from "../../lib/api";
+import {
+  ErroIngestao,
+  ingerirFicheiro,
+  ingerirUrl,
+  listarBiblioteca,
+} from "../../lib/api";
 import { copy } from "../../lib/copy";
 import { BibliotecaVazia } from "../vazios/BibliotecaVazia";
+import { UrlRecusada } from "../vazios/UrlRecusada";
 import { ListaVirtualizada, type DocumentoLista } from "./ListaVirtualizada";
 
 export type PainelBibliotecaProps = {
@@ -15,6 +21,8 @@ export function PainelBiblioteca({
 }: PainelBibliotecaProps) {
   const [docs, setDocs] = useState<DocumentoLista[]>([]);
   const [erro, setErro] = useState<string | null>(null);
+  const [urlRecusada, setUrlRecusada] = useState(false);
+  const [url, setUrl] = useState("");
   const [aCarregar, setACarregar] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -44,6 +52,7 @@ export function PainelBiblioteca({
     if (!lista?.length) return;
     setACarregar(true);
     setErro(null);
+    setUrlRecusada(false);
     try {
       for (const ficheiro of Array.from(lista)) {
         const r = await ingerirFicheiro(ficheiro);
@@ -55,6 +64,29 @@ export function PainelBiblioteca({
     } finally {
       setACarregar(false);
       if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function aoUrl(e: React.FormEvent) {
+    e.preventDefault();
+    const alvo = url.trim();
+    if (!alvo) return;
+    setACarregar(true);
+    setErro(null);
+    setUrlRecusada(false);
+    try {
+      const r = await ingerirUrl(alvo);
+      onIngerido?.(r.documento_id);
+      setUrl("");
+      await refrescar();
+    } catch (err) {
+      if (err instanceof ErroIngestao && err.codigo === "url_privada") {
+        setUrlRecusada(true);
+      } else {
+        setErro(err instanceof Error ? err.message : "Falha na ingestão");
+      }
+    } finally {
+      setACarregar(false);
     }
   }
 
@@ -93,7 +125,25 @@ export function PainelBiblioteca({
           hidden
           onChange={(e) => void aoFicheiro(e.target.files)}
         />
+        <form className="painel-biblioteca__url" onSubmit={(ev) => void aoUrl(ev)}>
+          <label className="visually-hidden" htmlFor="biblioteca-url">
+            {copy.lib.add_url}
+          </label>
+          <input
+            id="biblioteca-url"
+            type="url"
+            inputMode="url"
+            placeholder={copy.lib.url_placeholder}
+            value={url}
+            disabled={aCarregar}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <button type="submit" className="botao-fantasma" disabled={aCarregar || !url.trim()}>
+            {copy.lib.add_url}
+          </button>
+        </form>
       </header>
+      {urlRecusada ? <UrlRecusada /> : null}
       {erro ? (
         <p role="alert" className="painel-biblioteca__erro">
           {erro}

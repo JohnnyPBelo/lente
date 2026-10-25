@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from engine.ingestao.registo import DocumentoRegisto, registar_texto
 from engine.ingestao.ssrf import ResolverDns, UrlRecusada, validar_url
@@ -19,6 +19,14 @@ USER_AGENT = "Lente"
 TIMEOUT_S = 20
 LIMITE_BYTES = 2_000_000
 MAX_REDIRECTS = 5
+
+
+class _SemRedirect(HTTPRedirectHandler):
+    """Impede o urllib de seguir redirects — a revalidação SSRF fica em ``obter_texto_url``."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        del req, fp, code, msg, headers, newurl
+        return None
 
 
 @dataclass(frozen=True)
@@ -91,17 +99,20 @@ def _cabecalhos_mapa(brutos: object) -> dict[str, str]:
 
 
 def _transporte_urllib(url: str) -> RespostaHttp:
+    """Fetch pontual **sem** seguir redirects (SSRF: cada hop é revalidado fora)."""
     pedido = Request(
         url,
         headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"},
         method="GET",
     )
+    opener = build_opener(_SemRedirect)
     try:
-        with urlopen(pedido, timeout=TIMEOUT_S) as resposta:  # noqa: S310 — URL já validada
+        with opener.open(pedido, timeout=TIMEOUT_S) as resposta:  # noqa: S310 — URL já validada
             estado = int(getattr(resposta, "status", 200) or 200)
             cabecalhos = _cabecalhos_mapa(getattr(resposta, "headers", None))
             corpo = resposta.read(LIMITE_BYTES + 1)
     except HTTPError as erro:
+        # Com ``_SemRedirect``, 3xx chega aqui como HTTPError (não é seguido).
         estado = int(erro.code)
         cabecalhos = _cabecalhos_mapa(getattr(erro, "headers", None))
         try:

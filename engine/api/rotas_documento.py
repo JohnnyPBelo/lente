@@ -12,8 +12,13 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
 
-from engine.api.erros import CHAT_INEXISTENTE, PEDIDO_INVALIDO, resposta_erro
-from engine.api.ids import analisar_chat, analisar_doc, doc_id, formatar
+from engine.api.erros import (
+    CHAT_INEXISTENTE,
+    DOCUMENTO_INEXISTENTE,
+    PEDIDO_INVALIDO,
+    resposta_erro,
+)
+from engine.api.ids import IdInvalido, analisar_chat, analisar_doc, doc_id, formatar, msg_id
 from engine.armazenamento.repositorio import abrir
 
 # Memória de teste / mínimo sem índice completo
@@ -67,32 +72,16 @@ def _doc_numero(documento_id: str) -> int | None:
         return None
 
 
-def _garantir_documento(
-    ligacao: sqlite3.Connection, documento_id: str, *, titulo: str | None = None
-) -> int:
+def _documento_existente(ligacao: sqlite3.Connection, documento_id: str) -> int | None:
+    """Devolve o id numérico se existir na BD; nunca inventa linhas."""
     numero = _doc_numero(documento_id)
     if numero is None:
-        raise ValueError("documento_id inválido")
+        return None
     existente = ligacao.execute(
         "SELECT id FROM documentos WHERE id = ?", (numero,)
     ).fetchone()
-    if existente is not None:
-        return numero
-    momento = _agora()
-    ligacao.execute(
-        "INSERT INTO documentos "
-        "(id, caminho, titulo, tipo, sha256, estado, paginas, criado_em, actualizado_em) "
-        "VALUES (?, ?, ?, 'texto', ?, 'ok', 1, ?, ?)",
-        (
-            numero,
-            f"/tmp/{documento_id}",
-            titulo or documento_id,
-            "a" * 64,
-            momento,
-            momento,
-        ),
-    )
-    ligacao.commit()
+    if existente is None:
+        return None
     return numero
 
 
@@ -132,16 +121,52 @@ async def http_documento(request: Request) -> Response:
     doc_id_param = request.path_params["documento_id"]
     if doc_id_param in _DOCS:
         return _json(_DOCS[doc_id_param])
+
+    ligacao = _ligacao(request)
+    if ligacao is None:
+        return resposta_erro(
+            404, DOCUMENTO_INEXISTENTE, "Documento não encontrado."
+        )
+    try:
+        numero = analisar_doc(doc_id_param)
+    except IdInvalido:
+        return resposta_erro(400, PEDIDO_INVALIDO, "documento_id inválido")
+    linha = ligacao.execute(
+        "SELECT id, titulo, tipo, sha256, estado, paginas, sumario_json "
+        "FROM documentos WHERE id = ?",
+        (numero,),
+    ).fetchone()
+    if linha is None:
+        return resposta_erro(
+            404, DOCUMENTO_INEXISTENTE, "Documento não encontrado."
+        )
+    sumario: list[Any] = []
+    if linha["sumario_json"]:
+        try:
+            bruto = json.loads(linha["sumario_json"])
+            if isinstance(bruto, list):
+                sumario = bruto
+        except json.JSONDecodeError:
+            sumario = []
+    etiquetas = [
+        r[0]
+        for r in ligacao.execute(
+            "SELECT e.nome FROM etiquetas e "
+            "JOIN documento_etiquetas de ON de.etiqueta_id = e.id "
+            "WHERE de.documento_id = ? ORDER BY e.nome",
+            (numero,),
+        ).fetchall()
+    ]
     return _json(
         {
-            "id": doc_id_param,
-            "titulo": doc_id_param,
-            "tipo": "texto",
-            "paginas": 1,
-            "hash_sha256": "a" * 64,
-            "desactualizado": False,
-            "sumario": [],
-            "etiquetas": [],
+            "id": doc_id(int(linha["id"])),
+            "titulo": linha["titulo"],
+            "tipo": linha["tipo"] or "texto",
+            "paginas": int(linha["paginas"] or 1),
+            "hash_sha256": linha["sha256"],
+            "desactualizado": linha["estado"] == "desactualizado",
+            "sumario": sumario,
+            "etiquetas": etiquetas,
         }
     )
 
@@ -152,8 +177,40 @@ async def http_pagina(request: Request) -> Response:
     chave = f"{doc_id_param}:{pagina}"
     if chave in _PAGINAS:
         return _json(_PAGINAS[chave])
+
+    ligacao = _ligacao(request)
+    if ligacao is None:
+        return _json({"pagina": pagina, "texto": "", "largura": 595, "altura": 842})
+    try:
+        numero = analisar_doc(doc_id_param)
+    except IdInvalido:
+        return resposta_erro(400, PEDIDO_INVALIDO, "documento_id inválido")
+    existe = ligacao.execute(
+        "SELECT id FROM documentos WHERE id = ?", (numero,)
+    ).fetchone()
+    if existe is None:
+        return resposta_erro(
+            404, DOCUMENTO_INEXISTENTE, "Documento não encontrado."
+        )
+    # Preferir frases da página; senão concatenar blocos.
+    frases = ligacao.execute(
+        "SELECT texto FROM frases WHERE documento_id = ? AND (pagina = ? OR pagina IS NULL) "
+        "ORDER BY ordem ASC, id ASC",
+        (numero, pagina),
+    ).fetchall()
+    if frases:
+        texto = "\n".join(str(f["texto"]) for f in frases)
+    else:
+        blocos = ligacao.execute(
+            "SELECT texto FROM blocos WHERE documento_id = ? "
+            "AND (pagina_inicio IS NULL OR pagina_inicio <= ?) "
+            "AND (pagina_fim IS NULL OR pagina_fim >= ?) "
+            "ORDER BY ordem ASC, id ASC",
+            (numero, pagina, pagina),
+        ).fetchall()
+        texto = "\n\n".join(str(b["texto"]) for b in blocos)
     return _json(
-        {"pagina": pagina, "texto": "", "largura": 595, "altura": 842}
+        {"pagina": pagina, "texto": texto, "largura": 595, "altura": 842}
     )
 
 
@@ -167,7 +224,59 @@ async def http_highlights(request: Request) -> Response:
             for i in itens
             if not i.get("mensagem_id") or i.get("mensagem_id") == mensagem_id
         ]
-    return _json({"itens": itens})
+    if itens:
+        return _json({"itens": itens})
+
+    ligacao = _ligacao(request)
+    if ligacao is None:
+        return _json({"itens": []})
+    try:
+        numero = analisar_doc(doc_id_param)
+    except IdInvalido:
+        return resposta_erro(400, PEDIDO_INVALIDO, "documento_id inválido")
+
+    sql = (
+        "SELECT c.id, c.mensagem_id, c.indice, c.trecho_literal, c.pagina, "
+        "c.offset_inicio, c.offset_fim, c.caixas_json "
+        "FROM citacoes c WHERE c.documento_id = ?"
+    )
+    params: list[Any] = [numero]
+    if mensagem_id:
+        from engine.api.ids import analisar as _analisar_id
+
+        try:
+            msg_num = _analisar_id(mensagem_id, "msg")
+        except IdInvalido:
+            return _json({"itens": []})
+        sql += " AND c.mensagem_id = ?"
+        params.append(msg_num)
+    sql += " ORDER BY c.indice ASC, c.id ASC"
+    linhas = ligacao.execute(sql, params).fetchall()
+    saida = []
+    for l in linhas:
+        caixas: list[Any] = []
+        if l["caixas_json"]:
+            try:
+                bruto = json.loads(l["caixas_json"])
+                if isinstance(bruto, list):
+                    caixas = bruto
+            except json.JSONDecodeError:
+                caixas = []
+        saida.append(
+            {
+                "n": int(l["indice"]),
+                "mensagem_id": msg_id(int(l["mensagem_id"])),
+                "documento_id": doc_id_param,
+                "pagina": l["pagina"] or 1,
+                "texto": l["trecho_literal"],
+                "offsets": {
+                    "inicio": l["offset_inicio"] or 0,
+                    "fim": l["offset_fim"] or 0,
+                },
+                "caixas": caixas,
+            }
+        )
+    return _json({"itens": saida})
 
 
 async def http_listar_fixados(request: Request) -> Response:
@@ -244,10 +353,11 @@ async def http_fixar(request: Request) -> Response:
 
     _garantir_conversa(ligacao, conversa_numero)
 
-    try:
-        doc_numero = _garantir_documento(ligacao, doc_bruto, titulo=ficheiro)
-    except ValueError:
-        return resposta_erro(400, PEDIDO_INVALIDO, "documento_id inválido")
+    doc_numero = _documento_existente(ligacao, doc_bruto)
+    if doc_numero is None:
+        return resposta_erro(
+            404, DOCUMENTO_INEXISTENTE, "Documento não encontrado."
+        )
 
     mensagem_numero = _garantir_mensagem(ligacao, conversa_numero)
     momento = _agora()

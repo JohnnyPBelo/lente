@@ -8,7 +8,8 @@ from typing import Any, Callable
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
-from starlette.routing import Route
+from starlette.routing import Mount, Route
+from starlette.staticfiles import StaticFiles
 
 from engine.api.estaticos import caminho_dist, montar_estaticos
 from engine.api.motor import motor_procura_fts, motor_procura_sem_e2b
@@ -69,6 +70,7 @@ def criar_app(
     raiz_estaticos: Path | str | None = None,
     raiz_modelos: Path | str | None = None,
     pasta_uploads: Path | str | None = None,
+    pasta_miniaturas: Path | str | None = None,
     forcar_estado_modelos: dict[str, str] | None = None,
     descarregar_modelo: Callable[[str], dict[str, Any]] | None = None,
 ) -> Starlette:
@@ -103,6 +105,19 @@ def criar_app(
     if uploads is None and caminho is not None:
         uploads = caminho.parent / "biblioteca"
 
+    thumbs = Path(pasta_miniaturas) if pasta_miniaturas is not None else None
+    if thumbs is None and caminho is not None:
+        thumbs = caminho.parent / "miniaturas"
+    if thumbs is not None:
+        thumbs.mkdir(parents=True, exist_ok=True)
+        rotas.append(
+            Mount(
+                "/media/thumbs",
+                app=StaticFiles(directory=str(thumbs)),
+                name="miniaturas",
+            )
+        )
+
     app = Starlette(routes=rotas)
     app.state.caminho_sqlite = caminho
     app.state.motor_procura = motor
@@ -112,6 +127,7 @@ def criar_app(
         Path(raiz_modelos) if raiz_modelos is not None else None
     )
     app.state.pasta_uploads = uploads
+    app.state.pasta_miniaturas = thumbs
     app.state.forcar_estado_modelos = forcar_estado_modelos
     app.state.descarregar_modelo = descarregar_modelo
 

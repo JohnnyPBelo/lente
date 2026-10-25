@@ -2,18 +2,34 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from starlette.testclient import TestClient
 
 from engine.api.app import criar_app
-from engine.api.rotas_documento import listar_fixados, reiniciar_documento_falso
+from engine.api.rotas_documento import reiniciar_documento_falso
 from engine.armazenamento.repositorio import abrir
+
+
+def _agora() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace(
+        "+00:00", "Z"
+    )
 
 
 def test_reg_lei_008(caminho_tmp: Path) -> None:
     reiniciar_documento_falso()
-    abrir(caminho_tmp)
+    ligacao = abrir(caminho_tmp)
+    momento = _agora()
+    ligacao.execute(
+        "INSERT INTO documentos "
+        "(id, caminho, titulo, tipo, sha256, estado, paginas, criado_em, actualizado_em) "
+        "VALUES (12, ?, 'Politica', 'texto', ?, 'ok', 1, ?, ?)",
+        ("/tmp/politica.txt", "a" * 64, momento, momento),
+    )
+    ligacao.commit()
+
     app = criar_app(caminho_sqlite=caminho_tmp)
     cliente = TestClient(app)
 
@@ -30,9 +46,22 @@ def test_reg_lei_008(caminho_tmp: Path) -> None:
     fix_id = r.json()["id"]
     assert fix_id
 
-    fixados = listar_fixados("cht_01")
-    assert len(fixados) == 1
-    assert fixados[0]["texto"].startswith("O acesso remoto")
+    lista = cliente.get("/chats/cht_01/fixados")
+    assert lista.status_code == 200
+    itens = lista.json()["itens"]
+    assert len(itens) == 1
+    assert itens[0]["id"] == fix_id
+    assert itens[0]["texto"].startswith("O acesso remoto")
 
-    # reabrir: listagem em memória mantém-se (mesmo processo)
-    assert listar_fixados("cht_01")[0]["id"] == fix_id
+    # Documento inexistente → 404 (não inventa /tmp)
+    falha = cliente.post(
+        "/chats/cht_01/fixados",
+        json={
+            "documento_id": "doc_999",
+            "pagina": 1,
+            "texto": "fantasma",
+            "offsets": {"inicio": 0, "fim": 8},
+        },
+    )
+    assert falha.status_code == 404
+    assert falha.json()["erro"] == "documento_inexistente"

@@ -103,6 +103,8 @@ export const copy = {
   lib: {
     title: "Biblioteca",
     add: "Acrescentar ficheiros",
+    add_url: "Acrescentar URL",
+    url_placeholder: "https://…",
     outdated: "Desactualizado",
     tags: "Etiquetas",
     filter_type: "Tipo de documento",
