@@ -47,3 +47,15 @@ tests/embeddings/test_embedding_dim.py::test_reg_bus_001
 tests/embeddings/test_prefixos.py::test_reg_bus_002
 tests/embeddings/test_dispositivo.py::test_reg_mod_005
 tests/embeddings/test_sem_visao_audio.py::test_reg_for_004
+
+apps/ui/src/components/aprendizagem/reg-bar-012.test.tsx
+tests/feedback/test_export_import.py::test_reg_fbk_011
+tests/feedback/test_export_import.py::test_reg_fbk_012
+apps/ui/src/components/aprendizagem/reg-fbk-013.test.tsx
+tests/feedback/test_export_import.py::test_reg_fbk_014
+tests/feedback/test_export_import.py::test_reg_fbk_015
+tests/feedback/test_export_import.py::test_reg_fbk_016
+apps/ui/src/components/aprendizagem/reg-fbk-017.test.tsx
+tests/feedback/test_export_import.py::test_reg_fbk_018
+tests/feedback/test_export_import.py::test_reg_seg_004
+tests/feedback/test_export_import.py::test_reg_for_003
