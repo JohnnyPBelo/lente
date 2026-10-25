@@ -276,7 +276,10 @@ def test_reg_fbk_018(caminho_tmp) -> None:
 
     slot = SlotPesado(onnx_activo="onnx_base")
     treinador = _TreinadorDuplo(slot)
-    resultado = treinar_lora(ligacao, slot=slot, treinador=treinador)
+    # holdout_fraccao=0: o conjunto união (sem hashes repetidos) entra no treino.
+    resultado = treinar_lora(
+        ligacao, slot=slot, treinador=treinador, holdout_fraccao=0.0
+    )
 
     assert resultado["aceite"] is True
     assert treinador.rank == RANK
