@@ -33,9 +33,17 @@ def msg_id(numero: int) -> str:
     return formatar("msg", numero)
 
 
+def dos_id(numero: int) -> str:
+    return formatar("dos", numero)
+
+
 def analisar_chat(valor: str) -> int:
     return analisar(valor, "cht")
 
 
 def analisar_doc(valor: str) -> int:
     return analisar(valor, "doc")
+
+
+def analisar_dos(valor: str) -> int:
+    return analisar(valor, "dos")
