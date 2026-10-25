@@ -83,6 +83,7 @@ export const copy = {
     duplicates: "Pares repetidos entram uma vez",
   },
   chat: {
+    citation: "[{n}]",
     empty_title: "Nova conversa",
     empty_body: "Escreve a primeira procura na barra em baixo.",
     threshold: "Limiar",
@@ -100,9 +101,29 @@ export const copy = {
     tags: "Etiquetas",
     filter_type: "Tipo de documento",
   },
+  reader: {
+    zoom_in: "Ampliar",
+    zoom_out: "Reduzir",
+    fit_width: "Ajustar à largura",
+    fit_page: "Ajustar à página",
+    goto_page: "Ir para a página",
+    page_of: "Página {current} de {total}",
+    find_in_doc: "Procurar neste documento",
+    toc: "Sumário",
+    copy: "Copiar",
+    copy_citation: "Copiar citação",
+    pin_excerpt: "Fixar trecho",
+    next_mark: "Marca seguinte",
+    prev_mark: "Marca anterior",
+    minimize: "Minimizar",
+    bubble_confront: "Confrontar",
+  },
   a11y: {
     sidebar: "Barra lateral",
     write_bar: "Barra de escrita",
+    fan: "Leque de documentos",
+    reader: "Leitor de documento",
+    mode_menu: "Menu de modos",
   },
 } as const;
 
