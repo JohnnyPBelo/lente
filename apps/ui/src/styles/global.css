@@ -661,14 +661,17 @@ textarea {
 .estado-vazio {
   max-width: 28rem;
   margin: 2rem auto;
+}
 .estado-vazio h2 {
   margin: 0 0 0.5rem;
   font-size: 1.15rem;
   font-weight: 600;
+}
 .estado-vazio p {
   margin: 0 0 0.75rem;
   color: var(--lente-texto-suave);
   line-height: 1.45;
+}
 /* Motion — encurtar com prefers-reduced-motion (REQ-A11-001) */
 .percurso-motion__mensagem,
 .percurso-motion__leque,
@@ -677,6 +680,8 @@ textarea {
   transition-property: opacity, transform;
   transition-duration: var(--lente-motion-ms, 280ms);
   transition-timing-function: ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
   .percurso-motion__mensagem,
   .percurso-motion__leque,
   .percurso-motion__leitor,
@@ -684,3 +689,5 @@ textarea {
   .area-chat__fio > * {
     transition-duration: 1ms !important;
     animation-duration: 1ms !important;
+  }
+}
