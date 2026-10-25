@@ -12,6 +12,7 @@ URL_PRIVADA = "url_privada"
 FILA_OCUPADA = "fila_ocupada"
 LIMIAR_VAZIO = "limiar_vazio"
 CHAT_INEXISTENTE = "chat_inexistente"
+DOSSIER_INEXISTENTE = "dossier_inexistente"
 PEDIDO_INVALIDO = "pedido_invalido"
 BIND_PUBLICO = "bind_publico"
 
