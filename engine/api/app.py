@@ -15,6 +15,7 @@ from engine.api.motor import motor_procura_sem_e2b
 from engine.api.rotas_biblioteca import rotas_biblioteca
 from engine.api.rotas_chat import rotas_chat
 from engine.api.rotas_dossier import rotas_dossier
+from engine.api.rotas_modos import rotas_modos
 from engine.armazenamento.repositorio import abrir
 from engine.escalonador.slot import SlotPesado
 
@@ -55,6 +56,7 @@ def criar_app(
     rotas: list[Route] = [
         Route("/health", health, methods=["GET"]),
         *rotas_chat(),
+        *rotas_modos(),
         *rotas_biblioteca(),
         *rotas_dossier(),
     ]
