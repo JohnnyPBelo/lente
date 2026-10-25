@@ -40,3 +40,10 @@ tests/pesquisa/test_rrf.py::test_reg_bus_004
 tests/pesquisa/test_literal.py::test_reg_bus_007
 tests/pesquisa/test_limiar_platt.py::test_reg_bus_010
 tests/pesquisa/test_feedback_runtime.py::test_reg_fbk_007
+
+tests/embeddings/test_cortar.py::test_reg_ing_010
+tests/embeddings/test_miniatura.py::test_reg_ing_011
+tests/embeddings/test_embedding_dim.py::test_reg_bus_001
+tests/embeddings/test_prefixos.py::test_reg_bus_002
+tests/embeddings/test_dispositivo.py::test_reg_mod_005
+tests/embeddings/test_sem_visao_audio.py::test_reg_for_004
