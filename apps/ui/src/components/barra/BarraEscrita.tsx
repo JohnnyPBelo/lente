@@ -4,7 +4,7 @@ import {
   useId,
   useRef,
   useState,
-  type KeyboardEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { copy } from "../../lib/copy";
 import {
@@ -187,7 +187,7 @@ export function BarraEscrita({
       const t = texto.trim();
       if (!t) return;
       const r = await criarAlerta({ texto: t, lente });
-      if (r.erro === "limite_alertas") {
+      if ("erro" in r && r.erro === "limite_alertas") {
         setErroAlerta(copy.alerts.limit);
         onResultado?.({ tipo: "alerta", ok: false, erro: copy.alerts.limit });
         return;
@@ -212,7 +212,7 @@ export function BarraEscrita({
     }
   }
 
-  function tecladoBarra(e: KeyboardEvent<HTMLDivElement>) {
+  function tecladoBarra(e: ReactKeyboardEvent<HTMLDivElement>) {
     if (menuAberto) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -240,7 +240,7 @@ export function BarraEscrita({
     }
   }
 
-  function teclaCampo(e: KeyboardEvent<HTMLDivElement>) {
+  function teclaCampo(e: ReactKeyboardEvent<HTMLDivElement>) {
     const alvo = e.target as HTMLElement;
     const emCampo =
       alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA";
