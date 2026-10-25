@@ -100,7 +100,6 @@ tests/dossier/test_fechar_reabrir.py::test_reg_dos_005
 tests/dossier/test_fechar_reabrir.py::test_reg_dos_006
 tests/dossier/test_fechar_reabrir.py::test_reg_dos_007
 tests/dossier/test_export.py::test_reg_dos_008
-apps/ui/src/components/chrome/reg-cht-001.test.tsx
 apps/ui/src/components/barra/reg-bus-009.test.tsx
 apps/ui/src/components/barra/reg-bar-001.test.tsx
 apps/ui/src/components/barra/reg-bar-002.test.tsx
