@@ -13,3 +13,4 @@ tests/ingestao/test_texto_md_docx.py::test_reg_ing_002
 tests/ingestao/test_texto_md_docx.py::test_reg_ing_003
 tests/ingestao/test_texto_md_docx.py::test_reg_ing_004
 tests/ingestao/test_hash.py::test_reg_ing_008
+tests/ingestao/test_pdf_texto_caixas.py::test_reg_ing_005
