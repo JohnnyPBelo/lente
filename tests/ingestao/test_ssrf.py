@@ -62,3 +62,29 @@ def test_reg_seg_001() -> None:
         )
     assert chamadas == ["http://exemplo.test/origem"]
     assert all("127.0.0.1" not in c for c in chamadas)
+
+    # Redirect protocol-relative (//) para loopback — sem segundo fetch.
+    chamadas.clear()
+
+    def transporte_protocolo_relativo(url: str) -> RespostaHttp:
+        chamadas.append(url)
+        if url.rstrip("/") == "http://exemplo.test/origem":
+            return RespostaHttp(
+                estado=302,
+                corpo=b"",
+                cabecalhos={"Location": "//127.0.0.1/meta"},
+                url=url,
+            )
+        raise AssertionError(f"fetch inesperado para {url!r}")
+
+    with pytest.raises(UrlRecusada):
+        obter_texto_url(
+            "http://exemplo.test/origem",
+            resolver=_resolver_publico,
+            transporte=transporte_protocolo_relativo,
+        )
+    assert chamadas == ["http://exemplo.test/origem"]
+    assert all("127.0.0.1" not in c for c in chamadas)
+
+    with pytest.raises(UrlRecusada):
+        validar_url("http://user:pass@exemplo.test/", resolver=_resolver_publico)
