@@ -135,15 +135,29 @@ def revisoes_de_base() -> list[str]:
     return revisoes
 
 
+def _unicos_na_ordem(linhas: list[str]) -> list[str]:
+    """Primeira ocorrência de cada linha, na ordem do manifesto."""
+    vistos: set[str] = set()
+    saida: list[str] = []
+    for linha in linhas:
+        if linha in vistos:
+            continue
+        vistos.add(linha)
+        saida.append(linha)
+    return saida
+
+
 def encolhimentos() -> list[str]:
-    actual = ler_manifesto()
+    """O manifesto só cresce; remover uma repetição exacta de uma linha já listada é permitido."""
+    actual = _unicos_na_ordem(ler_manifesto())
     problemas: list[str] = []
     for rev in revisoes_de_base():
-        base = manifesto_no_commit(rev)
+        base = _unicos_na_ordem(manifesto_no_commit(rev))
         if actual[: len(base)] != base:
             problemas.append(
                 f"O manifesto encolheu ou reordenou linhas face a {rev}. "
-                "Só se acrescentam linhas no fim."
+                "Só se acrescentam linhas no fim "
+                "(repetições exactas de uma linha já presente podem sair)."
             )
     return problemas
 
@@ -169,8 +183,22 @@ def _funcao_existe(nodeid: str) -> None:
 
 
 def nodeids_recolhidos() -> set[str]:
+    """Recolhe node ids dos ficheiros pytest listados no manifesto.
+
+    O manifesto cresce com testes em ``tests/<pacote>/``, não só em
+    ``tests/regressao/``; a recolha segue esses caminhos.
+    """
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+    ficheiros = sorted(
+        {
+            linha.partition("::")[0]
+            for linha in ler_manifesto()
+            if "::" in linha
+        }
+    )
+    if not ficheiros:
+        return set()
     proc = subprocess.run(
         [
             sys.executable,
@@ -180,7 +208,7 @@ def nodeids_recolhidos() -> set[str]:
             "-q",
             "-p",
             "no:cacheprovider",
-            "tests/regressao",
+            *ficheiros,
         ],
         cwd=raiz(),
         capture_output=True,
