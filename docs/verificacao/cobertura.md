@@ -1,12 +1,12 @@
 # Cobertura dos requisitos pela regressão
 
-Cada identificador encontrado nos ficheiros de `docs/requisitos/` tem aqui uma linha. O nome da regressão é estável: troca-se o prefixo `REQ` por `REG`. O plano da coluna é quem acrescenta o teste ao manifesto. O estado `agora` significa que o teste correspondente já corre neste repositório. Não deve restar `pendente`.
+Cada identificador encontrado nos ficheiros de `docs/requisitos/` tem aqui uma linha. O nome da regressão é estável: troca-se o prefixo `REQ` por `REG`. O plano da coluna é quem acrescenta o teste ao manifesto. O estado `agora` significa que o teste correspondente já corre neste repositório. A tabela não deve ter linhas por fechar.
 
 A tabela tem 141 linhas, uma por requisito.
 
 Nesta versão, todas as linhas de produto estão `agora`. A suite verifica o arnês, os exemplos JSON, esta tabela, a ausência de pesos e a secção Buracos da matriz, e exige que cada `REG` da tabela conste do manifesto.
 
-Quem implementa um plano acrescenta as linhas `REG` no fim de `tests/regressao/manifesto.txt` e não edita esta tabela. O fecho passou cada linha a `agora`; a integração falha se algum requisito ficar sem regressão no manifesto ou se alguma linha voltar a `pendente`.
+Quem implementa um plano acrescenta as linhas `REG` no fim de `tests/regressao/manifesto.txt` e não edita esta tabela. O fecho passou cada linha a `agora`; a integração falha se algum requisito ficar sem regressão no manifesto ou se alguma linha deixar de estar `agora`.
 
 O verificador de esquemas JSON dos exemplos é um subconjunto da biblioteca padrão, descrito em [docs/desenvolvimento/regressao.md](../desenvolvimento/regressao.md). Não usa a biblioteca `jsonschema`.
 
