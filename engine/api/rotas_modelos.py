@@ -1,4 +1,4 @@
-"""HTTP-models-status / guidance / download — sem descarregar pesos nos testes."""
+"""HTTP-models-status / guidance / download — respostas honestas (#54)."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ async def models_guidance(request: Request) -> JSONResponse:
 
 
 async def models_download(request: Request) -> JSONResponse:
-    """POST /models/download — o download real fica atrás de um double injectável."""
+    """POST /models/download — só ``a_descarregar`` se houver downloader real."""
     corpo = await request.json()
     modelo = str(corpo.get("modelo", "")).strip()
     if modelo not in {"embedding", "juiz", "escritor"}:
@@ -44,6 +44,20 @@ async def models_download(request: Request) -> JSONResponse:
             {"erro": "pedido_invalido", "mensagem": "modelo desconhecido"},
             status_code=400,
         )
+
+    raiz = _raiz_modelos(request)
+    # Já pronto: não inventar download.
+    if raiz is not None:
+        actual = estado_modelos(raiz, forcar=_forcar(request)).get(modelo, {})
+        if actual.get("estado") == "pronto":
+            return JSONResponse(
+                {
+                    "estado": "pronto",
+                    "modelo": modelo,
+                    "caminho": actual.get("caminho"),
+                },
+                status_code=200,
+            )
 
     downloader: DownloadFn | None = getattr(
         request.app.state, "descarregar_modelo", None
@@ -53,11 +67,13 @@ async def models_download(request: Request) -> JSONResponse:
         codigo = int(resultado.pop("http_status", 202))
         return JSONResponse(resultado, status_code=codigo)
 
-    # Por omissão: simula bloqueio de licença com orientação (não descarrega).
+    # Sem downloader: orientação honesta — Gemma = licença; Apache = em falta.
+    estado_forcar = "erro_licenca" if modelo == "escritor" else "em_falta"
     guia = orientar_falta(
-        _raiz_modelos(request),
-        forcar={modelo: "erro_licenca"},  # type: ignore[dict-item]
+        raiz,
+        forcar={modelo: estado_forcar},  # type: ignore[dict-item]
     )
+    guia["erro"] = estado_forcar
     return JSONResponse(guia, status_code=409)
 
 

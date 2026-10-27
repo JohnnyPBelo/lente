@@ -162,3 +162,9 @@ tests/api/test_biblioteca_ingest_procura.py::test_ingest_url_indexa_e_procura
 tests/api/test_biblioteca_ingest_procura.py::test_ingest_url_privada_recusada
 tests/ingestao/test_ssrf.py::test_transporte_urllib_nao_segue_redirect_privado
 tests/api/test_leitor_sqlite.py::test_documento_e_pagina_apos_ingest
+tests/api/test_motor_pipeline.py::test_selecionar_sem_pesos_usa_fts
+tests/api/test_motor_pipeline.py::test_selecionar_com_juiz_usa_pipeline
+tests/api/test_motor_pipeline.py::test_pipeline_com_double_juiz_pontua
+tests/runtime/test_models_download_honesty.py::test_download_escritor_sem_env_devolve_409
+tests/runtime/test_models_download_honesty.py::test_download_ja_pronto_devolve_200
+tests/runtime/test_models_download_honesty.py::test_status_reflecte_disco

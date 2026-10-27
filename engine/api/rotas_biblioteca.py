@@ -120,6 +120,8 @@ def _indexar_registo(
     documento_id: int,
     caminho: Path,
     pasta_miniaturas: Path,
+    *,
+    raiz_modelos: Path | None = None,
 ) -> None:
     extraccao = extrair(caminho)
     indexar_texto_fts(
@@ -128,6 +130,64 @@ def _indexar_registo(
         texto=extraccao.texto,
         pasta_miniaturas=pasta_miniaturas,
     )
+    # Com EmbeddingGemma em disco, grava vectores 256d (cosseno exacto).
+    if raiz_modelos is not None:
+        titulo: str | None = None
+        if extraccao.titulos:
+            primeiro = extraccao.titulos[0].get("titulo")
+            if isinstance(primeiro, str) and primeiro.strip():
+                titulo = primeiro.strip()
+        _tentar_vectores(
+            ligacao,
+            documento_id=documento_id,
+            texto=extraccao.texto,
+            titulo=titulo,
+            raiz_modelos=raiz_modelos,
+        )
+
+
+def _tentar_vectores(
+    ligacao: sqlite3.Connection,
+    *,
+    documento_id: int,
+    texto: str,
+    titulo: str | None,
+    raiz_modelos: Path,
+) -> None:
+    from engine.api.motor import embedding_pronto
+    from engine.embeddings.carregar import carregar_modelo, embutir
+    from engine.embeddings.prefixos import prefixo_documento
+    from engine.pesquisa.vec import guardar_vector
+
+    if not embedding_pronto(raiz_modelos):
+        return
+    corpo = (texto or "").strip()
+    if not corpo:
+        return
+    try:
+        sessao = carregar_modelo(raiz_modelos=raiz_modelos, dispositivo="cpu")
+        linha = ligacao.execute(
+            "SELECT id, hash_id FROM blocos WHERE documento_id = ? ORDER BY id",
+            (documento_id,),
+        ).fetchall()
+        for bloco in linha:
+            bloco_id = int(bloco["id"])
+            hash_id = int(bloco["hash_id"])
+            entrada = prefixo_documento(titulo, str(
+                ligacao.execute(
+                    "SELECT texto FROM blocos WHERE id = ?", (bloco_id,)
+                ).fetchone()["texto"]
+            ))
+            vector = embutir(entrada, sessao=sessao)
+            guardar_vector(
+                ligacao,
+                bloco_id=bloco_id,
+                hash_id=hash_id,
+                vector=vector,
+            )
+    except Exception:
+        # Indexação FTS já ficou; vectores são opcionais.
+        return
 
 
 async def ingerir_biblioteca(request: Request) -> Response:
@@ -148,7 +208,14 @@ async def ingerir_biblioteca(request: Request) -> Response:
         ligacao = _ligacao(request)
         try:
             registo = ingestir_url(ligacao, url_limpa, destino)
-            _indexar_registo(ligacao, registo.id, Path(registo.caminho), thumbs)
+            raiz_m = getattr(request.app.state, "raiz_modelos", None)
+            _indexar_registo(
+                ligacao,
+                registo.id,
+                Path(registo.caminho),
+                thumbs,
+                raiz_modelos=Path(raiz_m) if raiz_m is not None else None,
+            )
         except UrlRecusada:
             return resposta_erro(
                 400,
@@ -182,7 +249,14 @@ async def ingerir_biblioteca(request: Request) -> Response:
     ligacao = _ligacao(request)
     try:
         registo = registar_ficheiro(ligacao, destino)
-        _indexar_registo(ligacao, registo.id, destino, thumbs)
+        raiz_m = getattr(request.app.state, "raiz_modelos", None)
+        _indexar_registo(
+            ligacao,
+            registo.id,
+            destino,
+            thumbs,
+            raiz_modelos=Path(raiz_m) if raiz_m is not None else None,
+        )
     except (TipoNaoSuportado, FicheiroInexistente) as exc:
         destino.unlink(missing_ok=True)
         return resposta_erro(400, PEDIDO_INVALIDO, str(exc))

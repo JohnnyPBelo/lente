@@ -12,7 +12,10 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from engine.api.estaticos import caminho_dist, montar_estaticos
-from engine.api.motor import motor_procura_fts, motor_procura_sem_e2b
+from engine.api.motor import (
+    escritor_pronto,
+    selecionar_motor_procura,
+)
 from engine.api.rotas_biblioteca import rotas_biblioteca
 from engine.api.rotas_chat import rotas_chat
 from engine.api.rotas_documento import rotas_documento
@@ -21,6 +24,7 @@ from engine.api.rotas_modelos import rotas_modelos
 from engine.api.rotas_modos import rotas_modos
 from engine.armazenamento.repositorio import abrir
 from engine.escalonador.slot import SlotPesado
+from engine.runtime.descarregar import criar_descarregador
 from engine.runtime.pesos import estados_health
 
 MotorProcura = Callable[..., dict[str, Any]]
@@ -94,12 +98,14 @@ def criar_app(
     if not tem_dist:
         rotas.append(Route("/", raiz_placeholder, methods=["GET"]))
 
+    raiz_m = Path(raiz_modelos) if raiz_modelos is not None else None
     if motor_procura is not None:
         motor = motor_procura
-    elif caminho is not None:
-        motor = motor_procura_fts(caminho)
     else:
-        motor = motor_procura_sem_e2b
+        motor = selecionar_motor_procura(caminho, raiz_modelos=raiz_m)
+
+    # E2B só se o GGUF estiver em disco (ou o caller forçar True com double).
+    e2b_activo = com_e2b or escritor_pronto(raiz_m)
 
     uploads = Path(pasta_uploads) if pasta_uploads is not None else None
     if uploads is None and caminho is not None:
@@ -118,18 +124,20 @@ def criar_app(
             )
         )
 
+    downloader = descarregar_modelo
+    if downloader is None and raiz_m is not None:
+        downloader = criar_descarregador(raiz_m)
+
     app = Starlette(routes=rotas)
     app.state.caminho_sqlite = caminho
     app.state.motor_procura = motor
-    app.state.com_e2b = com_e2b
+    app.state.com_e2b = e2b_activo
     app.state.slot = slot or SlotPesado()
-    app.state.raiz_modelos = (
-        Path(raiz_modelos) if raiz_modelos is not None else None
-    )
+    app.state.raiz_modelos = raiz_m
     app.state.pasta_uploads = uploads
     app.state.pasta_miniaturas = thumbs
     app.state.forcar_estado_modelos = forcar_estado_modelos
-    app.state.descarregar_modelo = descarregar_modelo
+    app.state.descarregar_modelo = downloader
 
     for mount in montar_estaticos(raiz_ui):
         app.routes.append(mount)
