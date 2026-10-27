@@ -1,22 +1,33 @@
 """Extracção de PDF com camada de texto: páginas, spans e caixas.
 
-Implementação em stdlib (sem pypdf/PyMuPDF): o CI só instala pytest, como no
-docx. Quando existir ``pyproject.toml``, uma biblioteca BSD/MIT (ex. pypdf,
-BSD) pode substituir este leitor mínimo. Coordenadas: origem no canto
-inferior esquerdo, pontos PDF (1/72").
+Preferência: ``pypdf`` (BSD) quando instalado — cobre PDFs modernos (reportlab,
+GovInfo, xref comprimido, etc.). Fallback stdlib: encontra o ``/Catalog`` via
+``/Root`` do trailer (não assume objecto 1) e descomprime streams
+``FlateDecode`` / ``ASCII85Decode``. Coordenadas: origem no canto inferior
+esquerdo, pontos PDF (1/72").
 
 Não chama Tesseract: PDF sem texto seleccionável marca ``precisa_ocr=True``.
 """
 
 from __future__ import annotations
 
+import base64
 import re
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
 from engine.ingestao.caixas import Caixa
 from engine.ingestao.paginas import PaginaExtraida, SpanExtraido
 from engine.ingestao.tipos import FicheiroInexistente
+
+try:
+    from pypdf import PdfReader as _PdfReader
+
+    _PYPDF_DISPONIVEL = True
+except ImportError:  # pragma: no cover - caminho CI mínimo sem pypdf
+    _PdfReader = None  # type: ignore[assignment, misc]
+    _PYPDF_DISPONIVEL = False
 
 # Larguras aproximadas Helvetica (WinAnsi) em milésimos da unidade em.
 _LARGURA_HELVETICA: dict[str, int] = {
@@ -195,7 +206,9 @@ def _corpo_stream(objecto: bytes) -> bytes | None:
     fim = _RE_ENDSTREAM.search(objecto, match.end())
     if fim is None:
         return None
-    return objecto[match.end() : fim.start()]
+    bruto = objecto[match.end() : fim.start()]
+    # O comprimento declarado pode omitir o \\n final antes de endstream.
+    return _descomprimir_fluxo(_dicionario_ate(objecto), bruto.rstrip(b"\r\n"))
 
 
 def _dicionario_ate(objecto: bytes) -> bytes:
@@ -203,6 +216,29 @@ def _dicionario_ate(objecto: bytes) -> bytes:
     if stream is not None:
         return objecto[: stream.start()]
     return objecto
+
+
+def _filtros_stream(dicionario: bytes) -> list[bytes]:
+    """Lista de filtros PDF na ordem de descodificação."""
+    arr = re.search(rb"/Filter\s*\[(.*?)\]", dicionario, re.DOTALL)
+    if arr:
+        return _RE_NAME.findall(arr.group(1))
+    unico = re.search(rb"/Filter\s*(/[^\s/\[\]()<>]+)", dicionario)
+    if unico:
+        return [unico.group(1)]
+    return []
+
+
+def _descomprimir_fluxo(dicionario: bytes, dados: bytes) -> bytes:
+    """Aplica FlateDecode / ASCII85Decode (reportlab e muitos PDFs reais)."""
+    actual = dados
+    for filtro in _filtros_stream(dicionario):
+        if filtro in (b"/FlateDecode", b"/Fl"):
+            actual = zlib.decompress(actual)
+        elif filtro in (b"/ASCII85Decode", b"/A85"):
+            actual = base64.a85decode(actual.rstrip(b" \t\r\n"), adobe=True)
+        # Outros filtros (DCT, JPX, …): devolvemos o que temos; o OCR cobre.
+    return actual
 
 
 def _refs(dicionario: bytes, chave: bytes) -> list[int]:
@@ -217,6 +253,20 @@ def _refs(dicionario: bytes, chave: bytes) -> list[int]:
     if not arr:
         return []
     return [int(m.group(1)) for m in _RE_INDIRECT.finditer(arr.group(1))]
+
+
+def _root_do_trailer(dados: bytes) -> int | None:
+    """Objecto ``/Root`` no trailer (últimos 16 KiB) — fiável em PDFs reais."""
+    cauda = dados[-16384:] if len(dados) > 16384 else dados
+    match = re.search(rb"/Root\s+(\d+)\s+(\d+)\s+R", cauda)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def _eh_catalogo(objecto: bytes) -> bool:
+    dicionario = _dicionario_ate(objecto)
+    return b"/Type /Catalog" in dicionario or b"/Type/Catalog" in dicionario
 
 
 def _resolver_conteudos(
@@ -246,12 +296,15 @@ def _resolver_conteudos(
     return b"\n".join(partes)
 
 
-def _paginas_raiz(objectos: dict[int, bytes]) -> list[int]:
-    catalogo = objectos.get(1)
-    if catalogo is None:
-        # Procurar /Catalog
+def _paginas_raiz(objectos: dict[int, bytes], dados: bytes) -> list[int]:
+    catalogo: bytes | None = None
+    root_id = _root_do_trailer(dados)
+    if root_id is not None and root_id in objectos:
+        catalogo = objectos[root_id]
+    if catalogo is None or not _eh_catalogo(catalogo):
+        catalogo = None
         for obj in objectos.values():
-            if b"/Type /Catalog" in obj or b"/Type/Catalog" in obj:
+            if _eh_catalogo(obj):
                 catalogo = obj
                 break
     if catalogo is None:
@@ -508,18 +561,49 @@ def _texto_de_spans(spans: list[SpanExtraido]) -> str:
     return "".join(partes)
 
 
-def extrair_pdf(caminho: Path | str) -> ResultadoPdf:
-    """Extrai páginas com texto e caixas; ``precisa_ocr`` se não houver texto."""
-    destino = Path(caminho)
-    if not destino.is_file():
-        raise FicheiroInexistente(str(destino))
+def _extrair_com_pypdf(caminho: Path) -> ResultadoPdf | None:
+    """Extrai com pypdf; ``None`` se indisponível ou se a leitura falhar."""
+    if not _PYPDF_DISPONIVEL or _PdfReader is None:
+        return None
+    try:
+        leitor = _PdfReader(str(caminho))
+        paginas: list[PaginaExtraida] = []
+        for indice, page in enumerate(leitor.pages, start=1):
+            texto = page.extract_text() or ""
+            spans: list[SpanExtraido] = []
+            if texto.strip():
+                caixa = Caixa(
+                    pagina=indice,
+                    x=0.0,
+                    y=0.0,
+                    largura=612.0,
+                    altura=792.0,
+                )
+                spans.append(
+                    SpanExtraido(
+                        texto=texto,
+                        offset_inicio=0,
+                        offset_fim=len(texto),
+                        caixa=caixa,
+                    )
+                )
+            paginas.append(
+                PaginaExtraida(numero=indice, texto=texto, spans=spans)
+            )
+        tem_texto = any(p.texto.strip() for p in paginas)
+        return ResultadoPdf(paginas=paginas, precisa_ocr=not tem_texto)
+    except Exception:
+        return None
 
-    dados = destino.read_bytes()
+
+def _extrair_com_stdlib(caminho: Path) -> ResultadoPdf:
+    """Leitor mínimo stdlib (catálogo via /Root + streams comprimidos)."""
+    dados = caminho.read_bytes()
     if not dados.startswith(b"%PDF"):
-        raise ValueError(f"não é um PDF: {destino}")
+        raise ValueError(f"não é um PDF: {caminho}")
 
     objectos = _carregar_objectos(dados)
-    ids_paginas = _paginas_raiz(objectos)
+    ids_paginas = _paginas_raiz(objectos, dados)
     paginas: list[PaginaExtraida] = []
     for indice, page_id in enumerate(ids_paginas, start=1):
         pagina_obj = objectos[page_id]
@@ -532,6 +616,21 @@ def extrair_pdf(caminho: Path | str) -> ResultadoPdf:
     tem_texto = any(p.texto.strip() for p in paginas)
     precisa_ocr = not tem_texto
     return ResultadoPdf(paginas=paginas, precisa_ocr=precisa_ocr)
+
+
+def extrair_pdf(caminho: Path | str) -> ResultadoPdf:
+    """Extrai páginas com texto e caixas; ``precisa_ocr`` se não houver texto.
+
+    Tenta ``pypdf`` primeiro; cai para o leitor stdlib se falhar.
+    """
+    destino = Path(caminho)
+    if not destino.is_file():
+        raise FicheiroInexistente(str(destino))
+
+    resultado = _extrair_com_pypdf(destino)
+    if resultado is not None:
+        return resultado
+    return _extrair_com_stdlib(destino)
 
 
 __all__ = ["ResultadoPdf", "extrair_pdf"]
