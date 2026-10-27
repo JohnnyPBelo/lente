@@ -14,8 +14,9 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
 from engine.api.erros import PEDIDO_INVALIDO, URL_PRIVADA, resposta_erro
-from engine.api.ids import doc_id
+from engine.api.ids import IdInvalido, analisar_doc, doc_id
 from engine.armazenamento.repositorio import abrir
+from engine.biblioteca.etiquetas import definir_etiquetas
 from engine.ingestao import extrair
 from engine.ingestao.indexar_minimo import indexar_texto_fts
 from engine.ingestao.registo import registar_ficheiro
@@ -24,6 +25,9 @@ from engine.ingestao.tipos import FicheiroInexistente, TipoNaoSuportado
 from engine.ingestao.url import ingestir_url
 
 _NOME_SEGURO = re.compile(r"[^A-Za-z0-9._\-]+")
+# Teto local: evita DoS de RAM/disco em multipart (issue #49).
+LIMITE_UPLOAD_BYTES = 50 * 1024 * 1024
+_CHUNK = 64 * 1024
 
 
 def _ligacao(request: Request) -> sqlite3.Connection:
@@ -243,8 +247,26 @@ async def ingerir_biblioteca(request: Request) -> Response:
         destino = pasta / f"{destino.stem}_{contador}{destino.suffix}"
         contador += 1
 
-    dados = await ficheiro.read()
-    destino.write_bytes(dados)
+    total = 0
+    try:
+        with destino.open("wb") as saida:
+            while True:
+                pedaco = await ficheiro.read(_CHUNK)
+                if not pedaco:
+                    break
+                total += len(pedaco)
+                if total > LIMITE_UPLOAD_BYTES:
+                    saida.close()
+                    destino.unlink(missing_ok=True)
+                    return resposta_erro(
+                        413,
+                        PEDIDO_INVALIDO,
+                        "Ficheiro demasiado grande.",
+                    )
+                saida.write(pedaco)
+    except Exception:
+        destino.unlink(missing_ok=True)
+        raise
 
     ligacao = _ligacao(request)
     try:
@@ -269,8 +291,40 @@ async def ingerir_biblioteca(request: Request) -> Response:
     )
 
 
+async def etiquetar_documento(request: Request) -> Response:
+    """PUT /documents/{documento_id}/tags — etiquetas manuais."""
+    bruto = request.path_params.get("documento_id", "")
+    try:
+        numero = analisar_doc(str(bruto))
+    except IdInvalido:
+        return resposta_erro(400, PEDIDO_INVALIDO, "documento_id inválido.")
+    try:
+        corpo = await request.json()
+    except Exception:
+        return resposta_erro(400, PEDIDO_INVALIDO, "JSON inválido.")
+    if not isinstance(corpo, dict):
+        return resposta_erro(400, PEDIDO_INVALIDO, "JSON inválido.")
+    nomes = corpo.get("etiquetas")
+    if not isinstance(nomes, list) or not all(isinstance(x, str) for x in nomes):
+        return resposta_erro(400, PEDIDO_INVALIDO, "etiquetas deve ser lista de strings.")
+
+    ligacao = _ligacao(request)
+    existente = ligacao.execute(
+        "SELECT id FROM documentos WHERE id = ?", (numero,)
+    ).fetchone()
+    if existente is None:
+        return resposta_erro(404, PEDIDO_INVALIDO, "Documento inexistente.")
+    finais = definir_etiquetas(ligacao, numero, list(nomes))
+    return JSONResponse({"id": doc_id(numero), "etiquetas": finais})
+
+
 def rotas_biblioteca() -> list[Route]:
     return [
         Route("/library", listar_biblioteca, methods=["GET"]),
         Route("/library/ingest", ingerir_biblioteca, methods=["POST"]),
+        Route(
+            "/documents/{documento_id}/tags",
+            etiquetar_documento,
+            methods=["PUT"],
+        ),
     ]

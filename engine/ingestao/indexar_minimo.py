@@ -142,7 +142,7 @@ def indexar_texto_fts(
     miniatura_caminho: str | None = None
     if pasta_miniaturas is not None:
         destino = Path(pasta_miniaturas) / nome_ficheiro_miniatura(documento_id, 1)
-        gerado = gerar_miniatura(destino)
+        gerado = gerar_miniatura(destino, texto=corpo[:200])
         miniatura_caminho = str(gerado)
 
     if miniatura_caminho is not None:

@@ -261,6 +261,17 @@ export function semearConversas(
 /* ——— Modos da barra (PLN-14) ——— */
 
 export async function obterLimiar(): Promise<number> {
+  if (!usarFalso) {
+    try {
+      const saude = await pedir<{ limiar?: number }>("/health");
+      if (saude && typeof saude.limiar === "number") {
+        limiarActual = saude.limiar;
+        return limiarActual;
+      }
+    } catch {
+      /* motor indisponível — mantém último valor conhecido */
+    }
+  }
   return limiarActual;
 }
 
@@ -397,7 +408,7 @@ export async function ingerirFicheiro(
     body: corpo,
   });
   if (!resposta.ok) {
-    throw new Error(`HTTP ${resposta.status} em /library/ingest`);
+    throw await erroIngestaoDeResposta(resposta);
   }
   return (await resposta.json()) as { documento_id: string; estado: string };
 }
@@ -426,21 +437,30 @@ export async function ingerirUrl(
     body: JSON.stringify({ url }),
   });
   if (!resposta.ok) {
-    let codigo = "pedido_invalido";
-    let mensagem = `HTTP ${resposta.status} em /library/ingest`;
-    try {
-      const corpo = (await resposta.json()) as {
-        erro?: string;
-        mensagem?: string;
-      };
-      if (corpo.erro) codigo = corpo.erro;
-      if (corpo.mensagem) mensagem = corpo.mensagem;
-    } catch {
-      /* corpo não-JSON */
-    }
-    throw new ErroIngestao(codigo, mensagem);
+    throw await erroIngestaoDeResposta(resposta);
   }
   return (await resposta.json()) as { documento_id: string; estado: string };
+}
+
+async function erroIngestaoDeResposta(resposta: Response): Promise<ErroIngestao> {
+  let codigo = "pedido_invalido";
+  let mensagem =
+    resposta.status === 413
+      ? "Ficheiro demasiado grande."
+      : resposta.status >= 500
+        ? "O motor falhou ao ingerir. Tenta de novo ou verifica o tipo de ficheiro."
+        : "Não foi possível ingerir este conteúdo.";
+  try {
+    const corpo = (await resposta.json()) as {
+      erro?: string;
+      mensagem?: string;
+    };
+    if (corpo.erro) codigo = corpo.erro;
+    if (corpo.mensagem) mensagem = corpo.mensagem;
+  } catch {
+    /* corpo não-JSON */
+  }
+  return new ErroIngestao(codigo, mensagem);
 }
 
 export async function correlacionar(pedido: {
@@ -470,32 +490,14 @@ export async function correlacionar(pedido: {
       return remoto as never;
     }
   }
+  // Modo falso/testes: sem IDs de documento inventados (issue #51).
   return {
     mensagem_id: novoId("msg"),
     papeis: ["A", "B", "relacao"],
     conceito_a: pedido.conceito_a,
     conceito_b: pedido.conceito_b,
     lente: pedido.lente,
-    eventos: [
-      {
-        papel: "A",
-        texto: pedido.conceito_a,
-        documento_id: "doc_a",
-        pagina: 1,
-      },
-      {
-        papel: "B",
-        texto: pedido.conceito_b,
-        documento_id: "doc_b",
-        pagina: 1,
-      },
-      {
-        papel: "relacao",
-        texto: `${pedido.conceito_a} ↔ ${pedido.conceito_b}`,
-        documento_id: "doc_rel",
-        pagina: 1,
-      },
-    ],
+    eventos: [],
   };
 }
 
@@ -640,6 +642,46 @@ export function semearAlertasFalsos(n: number): void {
 
 export function listarAlertasFalsos(): typeof alertasFalsos {
   return [...alertasFalsos];
+}
+
+export async function listarAlertas(): Promise<
+  { id: string; texto: string; activo: boolean; chat_id: string }[]
+> {
+  if (!usarFalso) {
+    const remoto = await pedir<{
+      itens: { id: string; texto: string; activo: boolean; chat_id: string }[];
+    }>("/alerts");
+    if (remoto) {
+      return remoto.itens;
+    }
+  }
+  return alertasFalsos.map((a) => ({
+    id: a.id,
+    texto: a.texto,
+    activo: true,
+    chat_id: novoId("cht_al"),
+  }));
+}
+
+export async function pedirCopiaSeguranca(destino: string): Promise<{
+  bytes: number;
+  caminho: string;
+}> {
+  const remoto = await pedir<{ bytes: number; caminho: string }>("/backup", {
+    method: "POST",
+    body: JSON.stringify({ destino }),
+  });
+  if (remoto) {
+    return remoto;
+  }
+  return { bytes: 0, caminho: destino };
+}
+
+export async function fecharDossier(chatId: string): Promise<{ id: string } | null> {
+  return pedir<{ id: string }>(`/chats/${chatId}/dossier`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }
 
 

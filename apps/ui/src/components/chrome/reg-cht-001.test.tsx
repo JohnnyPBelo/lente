@@ -41,7 +41,9 @@ describe("REG-CHT-001", () => {
     expect(itens).toHaveLength(1);
 
     const item = itens[0]!;
-    const menu = within(item).getByRole("button", { name: "Menu da conversa" });
+    const menu = within(item).getByRole("button", {
+      name: /Menu da conversa/,
+    });
     await utilizador.click(menu);
     await utilizador.click(
       screen.getByRole("menuitem", { name: copy.chrome.rename }),
@@ -57,9 +59,7 @@ describe("REG-CHT-001", () => {
     expect(within(lista).getByText("Acesso remoto")).toBeInTheDocument();
 
     await utilizador.click(
-      within(lista)
-        .getByRole("listitem")
-        .querySelector('button[aria-label="Menu da conversa"]')!,
+      within(lista).getByRole("button", { name: /Menu da conversa/ }),
     );
     await utilizador.click(
       screen.getByRole("menuitem", { name: copy.chrome.delete }),

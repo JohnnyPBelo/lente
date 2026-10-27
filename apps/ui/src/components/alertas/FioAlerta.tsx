@@ -46,7 +46,11 @@ export function FioAlerta({
           <li key={m.id}>
             <p>{m.texto}</p>
             {m.miniatura ? (
-              <img src={m.miniatura} alt="" data-documento={m.documento_id} />
+              <img
+                src={m.miniatura}
+                alt={`Miniatura do documento ${m.documento_id}`}
+                data-documento={m.documento_id}
+              />
             ) : null}
           </li>
         ))}

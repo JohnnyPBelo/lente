@@ -12,6 +12,10 @@ ResolverDns = Callable[
     Sequence[ipaddress.IPv4Address | ipaddress.IPv6Address],
 ]
 
+# CGNAT / shared address space (RFC 6598) — não é ``is_private`` em todas as
+# versões de Python, mas é rede de operador e deve ser recusada.
+_REDE_CGNAT = ipaddress.ip_network("100.64.0.0/10")
+
 
 class UrlRecusada(Exception):
     """URL fora da política de superfície (código estável ``url_privada``)."""
@@ -51,6 +55,11 @@ def _resolver_sistema(
 def _ip_recusado(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
         return _ip_recusado(ip.ipv4_mapped)
+    if isinstance(ip, ipaddress.IPv4Address) and ip in _REDE_CGNAT:
+        return True
+    if isinstance(ip, ipaddress.IPv6Address):
+        # IPv4-compatible / mapped já tratado; CGNAT só aplica a IPv4.
+        pass
     return bool(
         ip.is_private
         or ip.is_loopback
@@ -61,9 +70,14 @@ def _ip_recusado(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     )
 
 
-def validar_url(url: str, *, resolver: ResolverDns | None = None) -> None:
+def validar_url(
+    url: str,
+    *,
+    resolver: ResolverDns | None = None,
+) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     """Recusa esquemas não HTTP(S), credenciais e hosts/IPs privados.
 
+    Devolve a lista de IPs públicos validados (pin para o fetch).
     ``resolver`` permite injectar DNS nos testes; por omissão usa o sistema.
     """
     analisado = urlparse(url)
@@ -84,7 +98,7 @@ def validar_url(url: str, *, resolver: ResolverDns | None = None) -> None:
     if literal is not None:
         if _ip_recusado(literal):
             raise UrlRecusada(url)
-        return
+        return [literal]
 
     resolver_efectivo = resolver or _resolver_sistema
     enderecos = list(resolver_efectivo(host))
@@ -92,3 +106,4 @@ def validar_url(url: str, *, resolver: ResolverDns | None = None) -> None:
         raise UrlRecusada(url)
     if any(_ip_recusado(ip) for ip in enderecos):
         raise UrlRecusada(url)
+    return list(enderecos)

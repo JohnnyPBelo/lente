@@ -16,14 +16,18 @@ from engine.api.motor import (
     escritor_pronto,
     selecionar_motor_procura,
 )
+from engine.api.rotas_alertas import rotas_alertas
+from engine.api.rotas_backup import rotas_backup
 from engine.api.rotas_biblioteca import rotas_biblioteca
 from engine.api.rotas_chat import rotas_chat
+from engine.api.rotas_correcoes import rotas_correcoes
 from engine.api.rotas_documento import rotas_documento
 from engine.api.rotas_dossier import rotas_dossier
 from engine.api.rotas_modelos import rotas_modelos
 from engine.api.rotas_modos import rotas_modos
 from engine.armazenamento.repositorio import abrir
 from engine.escalonador.slot import SlotPesado
+from engine.pesquisa.limiar import limiar_visivel
 from engine.runtime.descarregar import criar_descarregador
 from engine.runtime.pesos import estados_health
 
@@ -43,18 +47,30 @@ async def health(request: Request) -> JSONResponse:
     raiz_modelos = getattr(request.app.state, "raiz_modelos", None)
     forcar = getattr(request.app.state, "forcar_estado_modelos", None)
     modelos = estados_health(raiz_modelos, forcar=forcar)
+    motor = getattr(request.app.state, "motor_procura", None)
+    procura = getattr(motor, "modo", None) or (
+        "pipeline"
+        if modelos.get("juiz") == "pronto"
+        else "fts_degradado"
+    )
     disco = 0
     caminho = getattr(request.app.state, "caminho_sqlite", None)
     if caminho is not None:
         ficheiro = Path(caminho)
         if ficheiro.is_file():
-            disco = max(1, ficheiro.stat().st_size // (1024 * 1024)) if ficheiro.stat().st_size >= 1024 * 1024 else 0
+            disco = (
+                max(1, ficheiro.stat().st_size // (1024 * 1024))
+                if ficheiro.stat().st_size >= 1024 * 1024
+                else 0
+            )
     return JSONResponse(
         {
             "ok": True,
             "versao": VERSAO,
             "modelos": modelos,
             "disco_data_mb": disco,
+            "procura": procura,
+            "limiar": limiar_visivel(),
         }
     )
 
@@ -91,6 +107,9 @@ def criar_app(
         *rotas_dossier(),
         *rotas_documento(),
         *rotas_modelos(),
+        *rotas_alertas(),
+        *rotas_correcoes(),
+        *rotas_backup(),
     ]
 
     raiz_ui = Path(raiz_estaticos) if raiz_estaticos is not None else None
@@ -136,6 +155,7 @@ def criar_app(
     app.state.raiz_modelos = raiz_m
     app.state.pasta_uploads = uploads
     app.state.pasta_miniaturas = thumbs
+    app.state.pasta_data = caminho.parent if caminho is not None else None
     app.state.forcar_estado_modelos = forcar_estado_modelos
     app.state.descarregar_modelo = downloader
 

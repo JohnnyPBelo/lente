@@ -14,7 +14,7 @@ class FicheiroInexistente(Exception):
 
 
 class TipoNaoSuportado(Exception):
-    """Extensão fora do âmbito deste plano (txt / md / docx)."""
+    """Extensão fora do âmbito desta ingestão."""
 
     def __init__(self, caminho: str, extensao: str) -> None:
         self.caminho = caminho
@@ -26,7 +26,7 @@ class TipoNaoSuportado(Exception):
 
 
 def classificar(caminho: Path | str) -> str:
-    """Devolve ``texto``, ``markdown`` ou ``docx`` conforme a extensão."""
+    """Devolve o tipo lógico conforme a extensão."""
     destino = Path(caminho)
     extensao = destino.suffix.lower()
     if extensao == ".txt":
@@ -35,4 +35,8 @@ def classificar(caminho: Path | str) -> str:
         return "markdown"
     if extensao == ".docx":
         return "docx"
+    if extensao == ".pdf":
+        return "pdf"
+    if extensao in {".png", ".jpg", ".jpeg", ".webp"}:
+        return "imagem"
     raise TipoNaoSuportado(str(destino), extensao)

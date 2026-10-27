@@ -2,12 +2,16 @@ import { useEffect, useId, useState } from "react";
 import {
   apagarConversa,
   criarConversa,
+  listarAlertas,
   listarConversas,
+  pedirCopiaSeguranca,
   renomearConversa,
   semearConversas,
 } from "../../lib/api";
 import { copy } from "../../lib/copy";
 import { EstadoAprendizagem } from "../aprendizagem/EstadoAprendizagem";
+import { GrupoAlertas, type AlertaLista } from "../alertas/GrupoAlertas";
+import { CopiaSeguranca } from "../backup/CopiaSeguranca";
 
 export type ConversaLista = { id: string; nome: string };
 
@@ -36,6 +40,7 @@ export function BarraLateral({
   const [menuAbertoId, setMenuAbertoId] = useState<string | null>(null);
   const [aRenomearId, setARenomearId] = useState<string | null>(null);
   const [nomeRascunho, setNomeRascunho] = useState("");
+  const [alertas, setAlertas] = useState<AlertaLista[]>([]);
 
   useEffect(() => {
     if (conversas) {
@@ -61,6 +66,14 @@ export function BarraLateral({
       })
       .catch(() => {
         /* motor indisponível — lista vazia */
+      });
+    listarAlertas()
+      .then((lista) => {
+        if (!vivo) return;
+        setAlertas(lista);
+      })
+      .catch(() => {
+        /* motor indisponível */
       });
     return () => {
       vivo = false;
@@ -118,6 +131,11 @@ export function BarraLateral({
   return (
     <nav className="barra-lateral vidro" aria-label={copy.a11y.sidebar}>
       <EstadoAprendizagem />
+      <CopiaSeguranca
+        onCopiar={async (destino) => {
+          await pedirCopiaSeguranca(destino);
+        }}
+      />
 
       <div className="barra-lateral__conversas">
         <div className="barra-lateral__cabecalho">
@@ -191,7 +209,9 @@ export function BarraLateral({
                       <button
                         type="button"
                         className="botao-icone"
-                        aria-label="Menu da conversa"
+                        aria-label={`Menu da conversa: ${item.nome}`}
+                        title={`Menu da conversa: ${item.nome}`}
+
                         aria-expanded={menuAbertoId === item.id}
                         aria-haspopup="menu"
                         onClick={() =>
@@ -228,6 +248,17 @@ export function BarraLateral({
           })}
         </ul>
       </div>
+
+      <GrupoAlertas
+        alertas={alertas}
+        alertaActivoId={activaId}
+        onSeleccionar={(id) => {
+          const alvo = alertas.find((a) => a.id === id);
+          if (alvo?.chat_id) {
+            seleccionar(alvo.chat_id);
+          }
+        }}
+      />
     </nav>
   );
 }

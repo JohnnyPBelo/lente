@@ -18,6 +18,13 @@ export function Miniatura({
   onAbrir,
   onFoco,
 }: MiniaturaProps) {
+  const rotulo =
+    doc.titulo ??
+    `Documento ${doc.documento_id}, página ${doc.pagina}`;
+  const alt = doc.titulo
+    ? `Miniatura: ${doc.titulo}`
+    : `Miniatura do documento ${doc.documento_id}, página ${doc.pagina}`;
+
   return (
     <button
       type="button"
@@ -27,12 +34,12 @@ export function Miniatura({
       data-documento-id={doc.documento_id}
       data-fonte="indexacao"
       data-pagina={doc.pagina}
-      aria-label={doc.titulo ?? `Documento ${doc.documento_id}, página ${doc.pagina}`}
+      aria-label={rotulo}
       onMouseEnter={onFoco}
       onFocus={onFoco}
       onClick={() => onAbrir?.(doc.documento_id)}
     >
-      <img src={doc.url} alt="" className="miniatura__img" draggable={false} />
+      <img src={doc.url} alt={alt} className="miniatura__img" draggable={false} />
     </button>
   );
 }

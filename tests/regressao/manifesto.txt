@@ -168,3 +168,12 @@ tests/api/test_motor_pipeline.py::test_pipeline_com_double_juiz_pontua
 tests/runtime/test_models_download_honesty.py::test_download_escritor_sem_env_devolve_409
 tests/runtime/test_models_download_honesty.py::test_download_ja_pronto_devolve_200
 tests/runtime/test_models_download_honesty.py::test_status_reflecte_disco
+tests/api/test_rotas_fecho.py::test_upload_excede_limite_devolve_413
+tests/api/test_rotas_fecho.py::test_alerts_criar_listar_toggle
+tests/api/test_rotas_fecho.py::test_backup_e_tags
+tests/api/test_rotas_fecho.py::test_health_documenta_fts_e_limiar
+tests/api/test_rotas_fecho.py::test_correlate_sem_docs_nao_inventa_ids
+tests/api/test_rotas_fecho.py::test_models_download_sem_hub_e_honesto
+tests/api/test_modos.py::test_correlacionar_sem_indice_nao_inventa_docs
+tests/ingestao/test_extrair_pdf_imagem.py::test_extrair_pdf_fixture
+tests/ingestao/test_extrair_pdf_imagem.py::test_classificar_pdf_e_imagem
