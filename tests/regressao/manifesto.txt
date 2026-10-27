@@ -179,3 +179,6 @@ tests/ingestao/test_extrair_pdf_imagem.py::test_extrair_pdf_fixture
 tests/ingestao/test_extrair_pdf_imagem.py::test_classificar_pdf_e_imagem
 tests/api/test_rotas_fecho.py::test_feedback_acertou_apos_procura
 tests/api/test_rotas_fecho.py::test_feedback_descartar_nao_cria_pares
+tests/ingestao/test_pdf_moderno.py::test_stdlib_pdf_catalogo_deslocado_e_flate
+tests/ingestao/test_pdf_moderno.py::test_extrair_pdf_moderno_nao_levanta_sem_pages
+tests/ingestao/test_pdf_moderno.py::test_extrair_pdf_reportlab_se_disponivel
