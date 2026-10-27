@@ -773,6 +773,39 @@ export async function fixarTrecho(
   return { id };
 }
 
+export type AccaoFeedback = "acertou" | "corrigir" | "descartar";
+
+export type PositivoFeedback = {
+  documento_id?: string;
+  pagina?: number;
+  texto: string;
+  offsets?: { inicio: number; fim: number };
+};
+
+/** HTTP-feedback — não bloqueia a procura seguinte. */
+export async function enviarFeedback(
+  mensagemId: string,
+  accao: AccaoFeedback,
+  positivos?: PositivoFeedback[],
+): Promise<{ aceite: boolean; treino_agendado: boolean }> {
+  const corpo: {
+    mensagem_id: string;
+    accao: AccaoFeedback;
+    positivos?: PositivoFeedback[];
+  } = { mensagem_id: mensagemId, accao };
+  if (accao === "corrigir" && positivos?.length) {
+    corpo.positivos = positivos;
+  }
+  if (!usarFalso) {
+    const r = await pedir<{ aceite: boolean; treino_agendado: boolean }>(
+      "/feedback",
+      { method: "POST", body: JSON.stringify(corpo) },
+    );
+    if (r) return r;
+  }
+  return { aceite: true, treino_agendado: false };
+}
+
 export function listarFixadosFalsos(chatId: string) {
   return fixadosFalsos.filter((f) => f.chat_id === chatId);
 }

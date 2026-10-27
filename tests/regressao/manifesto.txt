@@ -177,3 +177,5 @@ tests/api/test_rotas_fecho.py::test_models_download_sem_hub_e_honesto
 tests/api/test_modos.py::test_correlacionar_sem_indice_nao_inventa_docs
 tests/ingestao/test_extrair_pdf_imagem.py::test_extrair_pdf_fixture
 tests/ingestao/test_extrair_pdf_imagem.py::test_classificar_pdf_e_imagem
+tests/api/test_rotas_fecho.py::test_feedback_acertou_apos_procura
+tests/api/test_rotas_fecho.py::test_feedback_descartar_nao_cria_pares

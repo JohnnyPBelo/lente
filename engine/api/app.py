@@ -23,6 +23,7 @@ from engine.api.rotas_chat import rotas_chat
 from engine.api.rotas_correcoes import rotas_correcoes
 from engine.api.rotas_documento import rotas_documento
 from engine.api.rotas_dossier import rotas_dossier
+from engine.api.rotas_feedback import rotas_feedback
 from engine.api.rotas_modelos import rotas_modelos
 from engine.api.rotas_modos import rotas_modos
 from engine.armazenamento.repositorio import abrir
@@ -109,6 +110,7 @@ def criar_app(
         *rotas_modelos(),
         *rotas_alertas(),
         *rotas_correcoes(),
+        *rotas_feedback(),
         *rotas_backup(),
     ]
 

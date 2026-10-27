@@ -1,3 +1,4 @@
+import { enviarFeedback } from "../../lib/api";
 import { copy } from "../../lib/copy";
 import { Leque } from "../leque/Leque";
 import type { MiniaturaDoc } from "../leque/Miniatura";
@@ -68,7 +69,19 @@ export function MensagemComDocumentos({
         </p>
       ))}
       {mensagemId ? (
-        <LinhaFeedback mensagemId={mensagemId} temHighlights={temHighlights} />
+        <LinhaFeedback
+          mensagemId={mensagemId}
+          temHighlights={temHighlights}
+          onAcertou={() => {
+            void enviarFeedback(mensagemId, "acertou");
+          }}
+          onDescartar={() => {
+            void enviarFeedback(mensagemId, "descartar");
+          }}
+          onCorrigir={() => {
+            /* fluxo Corrigir continua no leitor; registo via selecção */
+          }}
+        />
       ) : null}
       {miniaturas.length ? (
         <Leque documentos={miniaturas} onAbrir={onAbrirDoc} />
