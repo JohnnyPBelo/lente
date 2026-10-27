@@ -60,13 +60,17 @@ def gerar_miniatura(
     destino: Path | str,
     *,
     renderizar_pagina: Callable[[], bytes] | None = None,
+    texto: str | None = None,
 ) -> Path:
     """Grava uma imagem pequena uma vez; ``renderizar_pagina`` só corre se preciso."""
     caminho = Path(destino)
     if caminho.is_file():
         return caminho
     caminho.parent.mkdir(parents=True, exist_ok=True)
-    dados = renderizar_pagina() if renderizar_pagina is not None else construir_png_miniatura()
+    if renderizar_pagina is not None:
+        dados = renderizar_pagina()
+    else:
+        dados = construir_png_miniatura(texto=texto)
     caminho.write_bytes(dados)
     return caminho
 
@@ -161,8 +165,16 @@ def indexar_documento(
     )
 
 
-def construir_png_miniatura(largura: int = 32, altura: int = 32) -> bytes:
-    """PNG cinzento pequeno sem Pillow (CI só instala pytest)."""
+def construir_png_miniatura(
+    largura: int = 96,
+    altura: int = 128,
+    *,
+    texto: str | None = None,
+) -> bytes:
+    """PNG legível sem Pillow: fundo claro, margem e linhas a sugerir texto.
+
+    Issue #59 — o placeholder 32×32 cinza uniforme lia-se como «vazio».
+    """
 
     def chunk(tipo: bytes, dados: bytes) -> bytes:
         return (
@@ -172,14 +184,35 @@ def construir_png_miniatura(largura: int = 32, altura: int = 32) -> bytes:
             + struct.pack(">I", zlib.crc32(tipo + dados) & 0xFFFFFFFF)
         )
 
+    fundo = (248, 248, 246)
+    margem = (60, 60, 58)
+    linha = (90, 90, 88)
+    # Semáforo de conteúdo: variação estável a partir do texto.
+    semente = sum(ord(c) for c in (texto or "lente")[:48]) % 40
+
+    pixels: list[bytes] = []
+    for y in range(altura):
+        fila: list[int] = []
+        for x in range(largura):
+            borda = x < 2 or y < 2 or x >= largura - 2 or y >= altura - 2
+            if borda:
+                r, g, b = margem
+            elif 12 <= y % 16 <= 14 and 8 <= x <= largura - 10:
+                # Linhas horizontais tipo parágrafo.
+                tom = max(40, linha[0] - (semente // 2))
+                r = g = b = tom
+            else:
+                r = min(255, fundo[0] + (semente % 8))
+                g = min(255, fundo[1] + ((semente + y) % 6))
+                b = min(255, fundo[2] + ((semente + x) % 6))
+            fila.extend((r, g, b))
+        pixels.append(b"\x00" + bytes(fila))
+
     ihdr = struct.pack(">IIBBBBB", largura, altura, 8, 2, 0, 0, 0)
-    linhas = b"".join(
-        b"\x00" + bytes([160, 160, 160]) * largura for _ in range(altura)
-    )
     return (
         b"\x89PNG\r\n\x1a\n"
         + chunk(b"IHDR", ihdr)
-        + chunk(b"IDAT", zlib.compress(linhas, 9))
+        + chunk(b"IDAT", zlib.compress(b"".join(pixels), 9))
         + chunk(b"IEND", b"")
     )
 

@@ -2,6 +2,7 @@ import { copy } from "../../lib/copy";
 import { Leque } from "../leque/Leque";
 import type { MiniaturaDoc } from "../leque/Miniatura";
 import { CitacaoLink, type DestinoCitacao } from "./CitacaoLink";
+import { LinhaFeedback } from "./LinhaFeedback";
 
 export type ExcertoCorrelacao = {
   n: number;
@@ -24,6 +25,8 @@ export type MensagemComDocumentosProps = {
   correlacionar?: boolean;
   excertos?: ExcertoCorrelacao[];
   frases?: FraseComCitacao[];
+  /** Id da mensagem no fio — liga a linha de feedback (issue #58). */
+  mensagemId?: string;
 };
 
 /** Resposta com citações, correlacionar ou leque (PLN-15). */
@@ -34,7 +37,10 @@ export function MensagemComDocumentos({
   correlacionar = false,
   excertos = [],
   frases = [],
+  mensagemId,
 }: MensagemComDocumentosProps) {
+  const temHighlights =
+    frases.length > 0 || miniaturas.length > 0 || excertos.length > 0;
   return (
     <div className="mensagem-docs" data-animacao="entrada">
       {correlacionar ? (
@@ -61,6 +67,9 @@ export function MensagemComDocumentos({
           <CitacaoLink n={frase.n} destino={frase.destino} onAbrir={onAbrirCitacao} />
         </p>
       ))}
+      {mensagemId ? (
+        <LinhaFeedback mensagemId={mensagemId} temHighlights={temHighlights} />
+      ) : null}
       {miniaturas.length ? (
         <Leque documentos={miniaturas} onAbrir={onAbrirDoc} />
       ) : null}
