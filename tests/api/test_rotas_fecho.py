@@ -117,3 +117,85 @@ def test_models_download_sem_hub_e_honesto(caminho_tmp: Path, tmp_path: Path) ->
     corpo = r.json()
     assert corpo.get("estado") != "a_descarregar"
     assert corpo.get("erro") in {"erro_licenca", "em_falta"} or "itens" in corpo
+
+
+def test_feedback_acertou_apos_procura(caminho_tmp: Path, tmp_path: Path) -> None:
+    """POST /feedback aceita Acertou sem bloquear e grava pares."""
+    from engine.armazenamento.repositorio import abrir
+    from engine.feedback.registar import listar_pares
+
+    uploads = tmp_path / "up"
+    thumbs = tmp_path / "th"
+    app = criar_app(
+        caminho_sqlite=caminho_tmp,
+        pasta_uploads=uploads,
+        pasta_miniaturas=thumbs,
+    )
+    cliente = TestClient(app)
+    ing = cliente.post(
+        "/library/ingest",
+        files={"ficheiros": ("a.txt", b"politica de acesso remoto VPN", "text/plain")},
+    )
+    assert ing.status_code == 202
+    chat = cliente.post("/chats", json={}).json()
+    procura = cliente.post(
+        "/search",
+        json={
+            "chat_id": chat["id"],
+            "texto": "acesso remoto VPN",
+            "lente": "investigar",
+        },
+    )
+    assert procura.status_code == 200
+    msg_id = None
+    for bloco in procura.text.split("\n\n"):
+        for linha in bloco.splitlines():
+            if linha.startswith("data:"):
+                import json
+
+                ev = json.loads(linha[5:].strip())
+                if ev.get("tipo") == "fim":
+                    msg_id = ev.get("mensagem_id")
+    assert msg_id
+
+    fb = cliente.post(
+        "/feedback",
+        json={"mensagem_id": msg_id, "accao": "acertou"},
+    )
+    assert fb.status_code == 202
+    corpo = fb.json()
+    assert corpo["aceite"] is True
+    assert corpo["treino_agendado"] is False
+    assert listar_pares(abrir(caminho_tmp))
+
+
+def test_feedback_descartar_nao_cria_pares(caminho_tmp: Path) -> None:
+    from datetime import datetime, timezone
+
+    from engine.armazenamento.repositorio import abrir
+    from engine.feedback.registar import listar_pares
+
+    ligacao = abrir(caminho_tmp)
+    momento = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ligacao.execute(
+        "INSERT INTO conversas (id, titulo, criado_em, actualizado_em, apagada) "
+        "VALUES (1, 't', ?, ?, 0)",
+        (momento, momento),
+    )
+    ligacao.execute(
+        "INSERT INTO mensagens "
+        "(id, conversa_id, papel, modo, lente, conteudo, meta_json, criado_em) "
+        "VALUES (7, 1, 'assistente', 'procurar', 'investigar', '', '{}', ?)",
+        (momento,),
+    )
+    ligacao.commit()
+
+    app = criar_app(caminho_sqlite=caminho_tmp)
+    cliente = TestClient(app)
+    fb = cliente.post(
+        "/feedback",
+        json={"mensagem_id": "msg_7", "accao": "descartar"},
+    )
+    assert fb.status_code == 202
+    assert fb.json()["aceite"] is True
+    assert listar_pares(abrir(caminho_tmp)) == []

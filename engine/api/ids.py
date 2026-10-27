@@ -47,3 +47,7 @@ def analisar_doc(valor: str) -> int:
 
 def analisar_dos(valor: str) -> int:
     return analisar(valor, "dos")
+
+
+def analisar_msg(valor: str) -> int:
+    return analisar(valor, "msg")
