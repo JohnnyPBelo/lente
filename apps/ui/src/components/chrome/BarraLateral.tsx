@@ -209,8 +209,7 @@ export function BarraLateral({
                       <button
                         type="button"
                         className="botao-icone"
-                        aria-label={`Mais acções da conversa ${item.nome}`}
-                        title={`Mais acções da conversa ${item.nome}`}
+                        aria-label="Menu da conversa"
 
                         aria-expanded={menuAbertoId === item.id}
                         aria-haspopup="menu"
