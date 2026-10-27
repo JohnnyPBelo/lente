@@ -37,6 +37,7 @@ export type ResultadoBarra =
       texto: string;
       lente: LenteId;
       limiar: number;
+      chat_id: string;
       resposta: ResultadoProcura;
     }
   | {
@@ -179,6 +180,7 @@ export function BarraEscrita({
         texto: t,
         lente,
         limiar: lim,
+        chat_id: idChat,
         resposta,
       });
       setTexto("");
