@@ -70,7 +70,8 @@ def test_confrontar_com_texto_colado() -> None:
     assert r["trecho_a"]["texto"]
 
 
-def test_correlacionar_papeis_a_b_relacao() -> None:
+def test_correlacionar_sem_indice_nao_inventa_docs() -> None:
+    """Sem pesquisar injectado → eventos vazios (issue #51)."""
     r = correlacionar(
         {
             "chat_id": "cht_01",
@@ -80,8 +81,37 @@ def test_correlacionar_papeis_a_b_relacao() -> None:
         }
     )
     assert r["papeis"] == ["A", "B", "relacao"]
+    assert r["eventos"] == []
+
+
+def test_correlacionar_papeis_a_b_relacao() -> None:
+    def pesquisar(conceito: str, papel: str):
+        return [
+            {
+                "tipo": "excerto",
+                "papel": papel,
+                "documento_id": f"doc_{len(conceito)}",
+                "pagina": 1,
+                "texto": conceito,
+                "offsets": {"inicio": 0, "fim": len(conceito)},
+                "caixas": [],
+                "score_juiz": 0.7,
+            }
+        ]
+
+    r = correlacionar(
+        {
+            "chat_id": "cht_01",
+            "conceito_a": "acessos",
+            "conceito_b": "auditoria",
+            "lente": "investigar",
+        },
+        pesquisar=pesquisar,
+    )
+    assert r["papeis"] == ["A", "B", "relacao"]
     papeis = {e["papel"] for e in r["eventos"]}
     assert papeis == {"A", "B", "relacao"}
+    assert all(str(e["documento_id"]).startswith("doc_") for e in r["eventos"])
 
 
 def test_lacunas_nao_chama_escritor() -> None:

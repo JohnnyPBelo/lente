@@ -98,23 +98,52 @@ def _cabecalhos_mapa(brutos: object) -> dict[str, str]:
     return mapa
 
 
-def _transporte_urllib(url: str) -> RespostaHttp:
-    """Fetch pontual **sem** seguir redirects (SSRF: cada hop é revalidado fora)."""
+def _transporte_urllib(
+    url: str,
+    *,
+    ip_pin: str | None = None,
+) -> RespostaHttp:
+    """Fetch pontual **sem** seguir redirects (SSRF: cada hop é revalidado fora).
+
+    Com ``ip_pin``, liga ao IP validado e envia ``Host`` do hostname original
+    (mitiga DNS rebinding clássico entre resolve e connect).
+    """
+    from urllib.parse import urlparse as _urlparse
+
+    analisado = _urlparse(url)
+    host = analisado.hostname or ""
+    esquema = (analisado.scheme or "").lower()
+    cabecalhos = {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml",
+    }
+    alvo = url
+    # Pin só em HTTP: HTTPS + IP parte o certificado TLS (escopo controlado).
+    if ip_pin and host and esquema == "http":
+        porto = analisado.port
+        if ":" in ip_pin and not ip_pin.startswith("["):
+            base = f"[{ip_pin}]"
+        else:
+            base = ip_pin
+        netloc = base if porto is None else f"{base}:{porto}"
+        alvo = analisado._replace(netloc=netloc).geturl()
+        cabecalhos["Host"] = host if porto is None else f"{host}:{porto}"
+
     pedido = Request(
-        url,
-        headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"},
+        alvo,
+        headers=cabecalhos,
         method="GET",
     )
     opener = build_opener(_SemRedirect)
     try:
         with opener.open(pedido, timeout=TIMEOUT_S) as resposta:  # noqa: S310 — URL já validada
             estado = int(getattr(resposta, "status", 200) or 200)
-            cabecalhos = _cabecalhos_mapa(getattr(resposta, "headers", None))
+            cabecalhos_r = _cabecalhos_mapa(getattr(resposta, "headers", None))
             corpo = resposta.read(LIMITE_BYTES + 1)
     except HTTPError as erro:
         # Com ``_SemRedirect``, 3xx chega aqui como HTTPError (não é seguido).
         estado = int(erro.code)
-        cabecalhos = _cabecalhos_mapa(getattr(erro, "headers", None))
+        cabecalhos_r = _cabecalhos_mapa(getattr(erro, "headers", None))
         try:
             corpo = erro.read(LIMITE_BYTES + 1)
         except Exception:  # noqa: BLE001 — corpo opcional em erros HTTP
@@ -124,7 +153,7 @@ def _transporte_urllib(url: str) -> RespostaHttp:
 
     if len(corpo) > LIMITE_BYTES:
         raise UrlRecusada(url, "Endereço privado recusado.")
-    return RespostaHttp(estado=estado, corpo=corpo, cabecalhos=cabecalhos, url=url)
+    return RespostaHttp(estado=estado, corpo=corpo, cabecalhos=cabecalhos_r, url=url)
 
 
 def _extrair_html(corpo: bytes, tipo_conteudo: str) -> str:
@@ -157,11 +186,14 @@ def obter_texto_url(
 ) -> str:
     """Descarrega a URL (com revalidação em cada redirect) e devolve texto principal."""
     actual = url
-    transporte_efectivo = transporte or _transporte_urllib
 
     for _ in range(MAX_REDIRECTS + 1):
-        validar_url(actual, resolver=resolver)
-        resposta = transporte_efectivo(actual)
+        ips = validar_url(actual, resolver=resolver)
+        pin = str(ips[0]) if ips else None
+        if transporte is not None:
+            resposta = transporte(actual)
+        else:
+            resposta = _transporte_urllib(actual, ip_pin=pin)
         if 300 <= resposta.estado < 400:
             localizacao = resposta.cabecalhos.get("Location") or resposta.cabecalhos.get(
                 "location"

@@ -89,6 +89,11 @@ def test_reg_seg_001() -> None:
     with pytest.raises(UrlRecusada):
         validar_url("http://user:pass@exemplo.test/", resolver=_resolver_publico)
 
+    # CGNAT / shared (RFC 6598) — issue #53.
+    with pytest.raises(UrlRecusada) as ctx_cgnat:
+        validar_url("http://100.64.1.1/")
+    assert ctx_cgnat.value.codigo == "url_privada"
+
 
 def test_transporte_urllib_nao_segue_redirect_privado(monkeypatch: pytest.MonkeyPatch) -> None:
     """REG: ``_transporte_urllib`` devolve 302 sem abrir o destino privado."""

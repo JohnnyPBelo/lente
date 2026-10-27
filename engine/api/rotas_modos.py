@@ -83,8 +83,16 @@ def confrontar(
         j_ab = float(pedido["_j_ab"])
         j_ba = float(pedido["_j_ba"])
     else:
-        cos_fn = cosseno or (lambda _x, _y: 0.0)
-        pont_fn = pontuar or (lambda _x, _y: 0.0)
+        # Sem juiz/embeddings: similaridade lexical honesta (não inventa docs).
+        def _jaccard(x: str, y: str) -> float:
+            ax = {t.lower() for t in x.split() if t}
+            by = {t.lower() for t in y.split() if t}
+            if not ax or not by:
+                return 0.0
+            return len(ax & by) / len(ax | by)
+
+        cos_fn = cosseno or _jaccard
+        pont_fn = pontuar or _jaccard
         cos = float(cos_fn(a.texto, b.texto))
         j_ab = float(pont_fn(a.texto, b.texto))
         j_ba = float(pont_fn(b.texto, a.texto))
@@ -117,7 +125,11 @@ def correlacionar(
     mensagem_id: str = "msg_correlate",
     pesquisar: Callable[[str, str], Sequence[Mapping[str, Any]]] | None = None,
 ) -> dict[str, Any]:
-    """HTTP-correlate: devolve excertos com papel A | B | relacao (mínimo)."""
+    """HTTP-correlate: devolve excertos com papel A | B | relacao (mínimo).
+
+    Sem ``pesquisar`` injectado (ou sem hits no índice) devolve eventos vazios —
+    nunca inventa ``documento_id``.
+    """
     conceito_a = str(pedido.get("conceito_a") or "").strip()
     conceito_b = str(pedido.get("conceito_b") or "").strip()
     lente = str(pedido.get("lente") or "investigar")
@@ -127,50 +139,22 @@ def correlacionar(
             "mensagem": "Conceito A e Conceito B são obrigatórios.",
         }
 
-    def _pesquisa_default(conceito: str, papel: str) -> list[dict[str, Any]]:
-        return [
-            {
-                "tipo": "excerto",
-                "n": 1 if papel == "A" else 2 if papel == "B" else 3,
-                "papel": papel,
-                "documento_id": f"doc_{papel.lower()}",
-                "pagina": 1,
-                "texto": conceito,
-                "offsets": {"inicio": 0, "fim": len(conceito)},
-                "caixas": [],
-                "score_juiz": 0.7,
-            }
-        ]
-
-    fn = pesquisar
-    if fn is None:
-        eventos: list[dict[str, Any]] = []
-        eventos.extend(_pesquisa_default(conceito_a, "A"))
-        eventos.extend(_pesquisa_default(conceito_b, "B"))
-        eventos.append(
-            {
-                "tipo": "excerto",
-                "n": 3,
-                "papel": "relacao",
-                "documento_id": "doc_rel",
-                "pagina": 1,
-                "texto": f"{conceito_a} ↔ {conceito_b}",
-                "offsets": {"inicio": 0, "fim": 3},
-                "caixas": [],
-                "score_juiz": 0.65,
-            }
-        )
-    else:
-        eventos = []
-        eventos.extend(list(fn(conceito_a, "A")))
-        eventos.extend(list(fn(conceito_b, "B")))
-        eventos.extend(list(fn(f"{conceito_a} {conceito_b}", "relacao")))
+    eventos: list[dict[str, Any]] = []
+    if pesquisar is not None:
+        eventos.extend(list(pesquisar(conceito_a, "A")))
+        eventos.extend(list(pesquisar(conceito_b, "B")))
+        eventos.extend(list(pesquisar(f"{conceito_a} {conceito_b}", "relacao")))
+        for i, ev in enumerate(eventos, start=1):
+            if "n" not in ev:
+                ev["n"] = i
 
     return {
         "mensagem_id": mensagem_id,
         "lente": lente,
         "eventos": eventos,
         "papeis": ["A", "B", "relacao"],
+        "conceito_a": conceito_a,
+        "conceito_b": conceito_b,
     }
 
 
@@ -256,6 +240,68 @@ def _json(corpo: dict, *, status: int = 200) -> Response:
     )
 
 
+def _pesquisar_fts_modos(request: Request) -> Callable[[str, str], Sequence[Mapping[str, Any]]] | None:
+    """Liga correlate/lacunas ao motor FTS real — só devolve ids do índice."""
+    from pathlib import Path
+
+    from engine.api.ids import doc_id
+    from engine.api.motor import _offsets_e_pagina
+    from engine.armazenamento.repositorio import abrir
+    from engine.pesquisa.fts import procurar_fts
+
+    caminho = getattr(request.app.state, "caminho_sqlite", None)
+    if caminho is None:
+        return None
+
+    def _fn(conceito: str, papel: str) -> list[dict[str, Any]]:
+        ligacao = abrir(Path(caminho))
+        hits = procurar_fts(ligacao, conceito.strip(), limite=5)
+        saida: list[dict[str, Any]] = []
+        for hit in hits:
+            offsets, pagina = _offsets_e_pagina(ligacao, hit)
+            saida.append(
+                {
+                    "tipo": "excerto",
+                    "papel": papel,
+                    "documento_id": doc_id(int(hit.documento_id)),
+                    "pagina": pagina,
+                    "texto": hit.texto,
+                    "offsets": offsets,
+                    "caixas": [],
+                    "score_juiz": 0.5,
+                }
+            )
+        return saida
+
+    return _fn
+
+
+def _avaliar_lacuna_fts(
+    request: Request,
+) -> Callable[[str], Mapping[str, Any]] | None:
+    pesquisar = _pesquisar_fts_modos(request)
+    if pesquisar is None:
+        return None
+
+    def _avaliar(linha: str) -> dict[str, Any]:
+        hits = list(pesquisar(linha, "A"))
+        if not hits:
+            return {"linha": linha, "estado": "ausente", "citacao": None}
+        melhor = hits[0]
+        score = float(melhor.get("score_juiz") or 0.0)
+        estado = "encontrado" if score >= 0.45 and melhor.get("texto") else "fraco"
+        citacao = {
+            "documento_id": melhor["documento_id"],
+            "pagina": melhor["pagina"],
+            "texto": melhor["texto"],
+            "offsets": melhor.get("offsets") or {"inicio": 0, "fim": 0},
+            "score_juiz": score,
+        }
+        return {"linha": linha, "estado": estado, "citacao": citacao}
+
+    return _avaliar
+
+
 async def http_correlate(request: Request) -> Response:
     try:
         pedido = await request.json()
@@ -263,7 +309,7 @@ async def http_correlate(request: Request) -> Response:
         return _json({"erro": "pedido_invalido", "mensagem": "JSON inválido."}, status=400)
     if not isinstance(pedido, dict):
         return _json({"erro": "pedido_invalido", "mensagem": "JSON inválido."}, status=400)
-    r = correlacionar(pedido)
+    r = correlacionar(pedido, pesquisar=_pesquisar_fts_modos(request))
     if "erro" in r:
         return _json(r, status=400)
     return _json(r)
@@ -276,7 +322,9 @@ async def http_confront(request: Request) -> Response:
         return _json({"erro": "pedido_invalido", "mensagem": "JSON inválido."}, status=400)
     if not isinstance(pedido, dict):
         return _json({"erro": "pedido_invalido", "mensagem": "JSON inválido."}, status=400)
-    r = confrontar(pedido)
+    pontuar = getattr(request.app.state, "pontuar_confronto", None)
+    cosseno = getattr(request.app.state, "cosseno_confronto", None)
+    r = confrontar(pedido, pontuar=pontuar, cosseno=cosseno)
     if "erro" in r:
         return _json(r, status=400)
     return _json(r)
@@ -289,7 +337,7 @@ async def http_lacunas(request: Request) -> Response:
         return _json({"erro": "pedido_invalido", "mensagem": "JSON inválido."}, status=400)
     if not isinstance(pedido, dict):
         return _json({"erro": "pedido_invalido", "mensagem": "JSON inválido."}, status=400)
-    r = lacunas(pedido)
+    r = lacunas(pedido, avaliar_linha=_avaliar_lacuna_fts(request))
     if "erro" in r:
         return _json(r, status=400)
     return _json(r)

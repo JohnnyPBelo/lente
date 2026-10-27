@@ -6,8 +6,10 @@ import { PainelBiblioteca } from "./components/biblioteca/PainelBiblioteca";
 import { MensagemComDocumentos } from "./components/chat/MensagemComDocumentos";
 import { SlotLeitor } from "./components/leitor/SlotLeitor";
 import { ProcuraSemDocumentos } from "./components/vazios/ProcuraSemDocumentos";
+import { BotaoFecharDossier } from "./components/dossier/BotaoFecharDossier";
 import {
   criarConversa,
+  fecharDossier,
   listarConversas,
   obterConversa,
   type MensagemFalsa,
@@ -18,6 +20,7 @@ import type { MiniaturaDoc } from "./components/leque/Miniatura";
 
 /**
  * Composição do chrome: conversa → biblioteca → procura → excertos/leque.
+ * Modos da barra (correlate/confront/alerta/lacunas) renderizam no fio.
  */
 export function App() {
   const [conversaActivaId, setConversaActivaId] = useState<string | null>(null);
@@ -26,6 +29,7 @@ export function App() {
   const [miniaturasActivas, setMiniaturasActivas] = useState<MiniaturaDoc[]>([]);
   const [mensagemLeitorId, setMensagemLeitorId] = useState<string | undefined>();
   const [listaEpoch, setListaEpoch] = useState(0);
+  const [avisoModo, setAvisoModo] = useState<string | null>(null);
   const criarConversaEmCurso = useRef<Promise<string> | null>(null);
 
   const aplicarAssistente = useCallback((ultima: MensagemFalsa | undefined) => {
@@ -79,6 +83,7 @@ export function App() {
   const aoSeleccionar = useCallback(
     (id: string) => {
       setVistaBiblioteca(false);
+      setAvisoModo(null);
       void carregarConversa(id);
     },
     [carregarConversa],
@@ -103,12 +108,100 @@ export function App() {
 
   const aoResultado = useCallback(
     async (r: ResultadoBarra) => {
+      setAvisoModo(null);
+
+      if (r.tipo === "alerta") {
+        setAvisoModo(
+          r.ok
+            ? "Alerta criado — aparece no grupo Alertas da barra lateral."
+            : r.erro || copy.alerts.limit,
+        );
+        setListaEpoch((n) => n + 1);
+        return;
+      }
+
+      if (r.tipo === "confrontar") {
+        const assistente: MensagemFalsa = {
+          id: r.resposta.mensagem_id ?? `msg_local_a_${Date.now()}`,
+          papel: "assistente",
+          texto: `${leituraConfrontar(r.resposta.leitura)} (${r.resposta.score.toFixed(2)})`,
+          frases: [
+            r.resposta.trecho_a.texto,
+            r.resposta.trecho_b.texto,
+          ].filter(Boolean),
+        };
+        setMensagens((prev) => [
+          ...prev,
+          {
+            id: `msg_local_${Date.now()}`,
+            papel: "utilizador",
+            texto: "Confrontar",
+          },
+          assistente,
+        ]);
+        return;
+      }
+
+      if (r.tipo === "correlacionar") {
+        const eventos = r.resposta.eventos ?? [];
+        const excertos = eventos
+          .filter((e) => e.documento_id)
+          .map((e, i) => ({
+            n: i + 1,
+            documento_id: e.documento_id,
+            pagina: e.pagina,
+            texto: e.texto,
+          }));
+        const assistente: MensagemFalsa = {
+          id: r.resposta.mensagem_id ?? `msg_local_a_${Date.now()}`,
+          papel: "assistente",
+          excertos,
+          texto:
+            excertos.length === 0
+              ? "Sem documentos no índice para estes conceitos."
+              : excertos.map((e) => e.texto).filter(Boolean).join("\n"),
+          frases: excertos.map((e) => e.texto || "").filter(Boolean),
+        };
+        setMensagens((prev) => [
+          ...prev,
+          {
+            id: `msg_local_${Date.now()}`,
+            papel: "utilizador",
+            texto: `${r.conceito_a} ↔ ${r.conceito_b}`,
+          },
+          assistente,
+        ]);
+        aplicarAssistente(assistente);
+        return;
+      }
+
+      if (r.tipo === "lacunas") {
+        const linhas = (r.resposta.itens ?? []).map(
+          (i) => `${i.estado}: ${i.linha}`,
+        );
+        const assistente: MensagemFalsa = {
+          id: r.resposta.mensagem_id ?? `msg_local_a_${Date.now()}`,
+          papel: "assistente",
+          texto: linhas.join("\n") || "Sem linhas.",
+          frases: linhas,
+        };
+        setMensagens((prev) => [
+          ...prev,
+          {
+            id: `msg_local_${Date.now()}`,
+            papel: "utilizador",
+            texto: "Lacunas",
+          },
+          assistente,
+        ]);
+        return;
+      }
+
       if (r.tipo !== "procurar") return;
       // Usa o chat_id da procura (já criada na barra) — evita segundo POST /chats.
       const chatId = r.chat_id;
       setConversaActivaId(chatId);
       setListaEpoch((n) => n + 1);
-      // O motor já gravou o turno; recarrega o fio real.
       try {
         await carregarConversa(chatId);
         if (!r.resposta.vazio) {
@@ -163,7 +256,21 @@ export function App() {
           >
             {copy.lib.title}
           </button>
+          {conversaActivaId ? (
+            <BotaoFecharDossier
+              onFechar={async () => {
+                await fecharDossier(conversaActivaId);
+                setAvisoModo("Dossier fechado.");
+              }}
+            />
+          ) : null}
         </div>
+
+        {avisoModo ? (
+          <p role="status" className="aviso-modo">
+            {avisoModo}
+          </p>
+        ) : null}
 
         {vistaBiblioteca ? (
           <PainelBiblioteca onFechar={() => setVistaBiblioteca(false)} />
@@ -206,12 +313,21 @@ export function App() {
                 if (
                   !frasesFonte.length &&
                   !miniaturas.length &&
-                  !excertos.length
+                  !excertos.length &&
+                  !mensagem.texto
                 ) {
                   return <ProcuraSemDocumentos />;
                 }
+                if (!frasesFonte.length && mensagem.texto) {
+                  return (
+                    <div className="mensagem-docs">
+                      <p className="mensagem-assistente__texto">{mensagem.texto}</p>
+                    </div>
+                  );
+                }
                 return (
                   <MensagemComDocumentos
+                    mensagemId={mensagem.id}
                     miniaturas={miniaturas}
                     frases={frasesFonte}
                     onAbrirDoc={(id) => {
@@ -259,4 +375,10 @@ export function App() {
       </main>
     </div>
   );
+}
+
+function leituraConfrontar(leitura: string): string {
+  if (leitura === "concordam") return copy.confront.reading_agree;
+  if (leitura === "contradizem-se") return copy.confront.reading_contradict;
+  return copy.confront.reading_different;
 }
