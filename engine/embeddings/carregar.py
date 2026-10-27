@@ -55,6 +55,17 @@ class SessaoEmbedding:
         return vectores[0:1] if unico else vectores
 
 
+# Sessões residentes partilhadas no processo (ingest + procura).
+# Sem isto, cada POST /library/ingest volta a carregar ~1,5 GB de pesos e
+# pode matar o processo (OOM) a meio de um stress run.
+_CACHE_SESSOES: dict[tuple[str, str], SessaoEmbedding] = {}
+
+
+def limpar_cache_sessoes() -> None:
+    """Esvazia o cache (testes / reinício controlado)."""
+    _CACHE_SESSOES.clear()
+
+
 def pasta_embedding(raiz_modelos: Path | str | None = None) -> Path:
     """Pasta runtime: ``models/embeddinggemma-2/`` (fora do git)."""
     raiz = Path(raiz_modelos) if raiz_modelos is not None else Path("models")
@@ -88,6 +99,12 @@ def carregar_modelo(
     if dtype == DTYPE_PROIBIDO:
         raise RuntimeError("caminho float16 não é usado")
 
+    # Doubles injectados (modelo=/factory=) nunca entram no cache residente.
+    usar_cache = modelo is None and factory is None
+    chave = (str(destino.resolve()), disp)
+    if usar_cache and chave in _CACHE_SESSOES:
+        return _CACHE_SESSOES[chave]
+
     if modelo is None:
         if not _pasta_tem_pesos(destino):
             raise PesosEmbeddingAusentes(str(destino))
@@ -106,7 +123,7 @@ def carregar_modelo(
         vision = getattr(modelo.config, "vision_config", None)
         audio = getattr(modelo.config, "audio_config", None)
 
-    return SessaoEmbedding(
+    sessao = SessaoEmbedding(
         modelo_id=MODELO_ID,
         caminho=destino,
         dispositivo=disp,
@@ -115,6 +132,9 @@ def carregar_modelo(
         audio_config=audio,
         _modelo=modelo,
     )
+    if usar_cache:
+        _CACHE_SESSOES[chave] = sessao
+    return sessao
 
 
 def embutir(
@@ -261,5 +281,6 @@ __all__ = [
     "caminho_pesos",
     "carregar_modelo",
     "embutir",
+    "limpar_cache_sessoes",
     "pasta_embedding",
 ]
