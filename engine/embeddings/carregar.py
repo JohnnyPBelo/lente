@@ -151,15 +151,67 @@ def _pasta_tem_pesos(pasta: Path) -> bool:
 
 
 def _factory_sentence_transformers(caminho: str, **kwargs: Any) -> Any:
-    """Carga real via sentence-transformers (só quando há pesos locais)."""
-    from sentence_transformers import SentenceTransformer
+    """Carga real dos pesos locais.
 
-    # Nunca float16.
+    sentence-transformers 6.2+ carrega EmbeddingGemma 2 mas falha em
+    ``encode`` (processor sem chat template). Usamos sempre
+    ``transformers.AutoModel`` para o caminho de produto.
+    """
     model_kwargs = dict(kwargs.pop("model_kwargs", {}) or {})
     torch_dtype = model_kwargs.get("torch_dtype")
     if torch_dtype is not None and str(torch_dtype).endswith("float16"):
         raise RuntimeError("float16 proibido na carga do EmbeddingGemma")
-    return SentenceTransformer(caminho, **kwargs, model_kwargs=model_kwargs)
+    return _factory_transformers_direct(
+        caminho, **kwargs, model_kwargs=model_kwargs
+    )
+
+
+def _factory_transformers_direct(caminho: str, **kwargs: Any) -> Any:
+    """AutoModel texto-only com ``.encode`` → vectores nativos 768d."""
+    import torch
+    from transformers import AutoModel, AutoTokenizer
+
+    model_kwargs = kwargs.get("model_kwargs", {}) or {}
+    device = kwargs.get("device", "cpu")
+    if isinstance(device, torch.device):
+        device = device.type
+
+    modelo = AutoModel.from_pretrained(
+        caminho,
+        torch_dtype=model_kwargs.get("torch_dtype", torch.float32),
+        trust_remote_code=True,
+    ).to(device)
+    modelo.eval()
+    tokenizador = AutoTokenizer.from_pretrained(caminho, trust_remote_code=True)
+
+    class DirectEmbedder:
+        def __init__(self, model: Any, tokenizer: Any, device_name: str) -> None:
+            self.model = model
+            self.tokenizer = tokenizer
+            self.device = device_name
+            self.vision_config = None
+            self.audio_config = None
+
+        def encode(self, textos: str | list[str]) -> list[list[float]]:
+            lote = [textos] if isinstance(textos, str) else list(textos)
+            with torch.no_grad():
+                entradas = self.tokenizer(
+                    lote,
+                    padding=True,
+                    truncation=True,
+                    return_tensors="pt",
+                    max_length=512,
+                ).to(self.device)
+                saidas = self.model(**entradas)
+                token_emb = saidas.last_hidden_state
+                mascara = entradas["attention_mask"].unsqueeze(-1).expand(token_emb.size()).float()
+                soma = torch.sum(token_emb * mascara, 1)
+                dens = torch.clamp(mascara.sum(1), min=1e-9)
+                sent = soma / dens
+                sent = torch.nn.functional.normalize(sent, p=2, dim=1)
+                return sent.cpu().numpy().tolist()
+
+    return DirectEmbedder(modelo, tokenizador, device)
 
 
 def _torch_dtype(dtype: str) -> Any:
