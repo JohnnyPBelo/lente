@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AreaChat } from "./components/chrome/AreaChat";
 import { BarraLateral } from "./components/chrome/BarraLateral";
 import { BarraEscrita, type ResultadoBarra } from "./components/barra/BarraEscrita";
@@ -25,6 +25,8 @@ export function App() {
   const [vistaBiblioteca, setVistaBiblioteca] = useState(false);
   const [miniaturasActivas, setMiniaturasActivas] = useState<MiniaturaDoc[]>([]);
   const [mensagemLeitorId, setMensagemLeitorId] = useState<string | undefined>();
+  const [listaEpoch, setListaEpoch] = useState(0);
+  const criarConversaEmCurso = useRef<Promise<string> | null>(null);
 
   const aplicarAssistente = useCallback((ultima: MensagemFalsa | undefined) => {
     if (!ultima || ultima.papel !== "assistente") {
@@ -84,16 +86,28 @@ export function App() {
 
   const garantirConversa = useCallback(async (): Promise<string> => {
     if (conversaActivaId) return conversaActivaId;
-    const criada = await criarConversa(null);
-    setConversaActivaId(criada.id);
-    setMensagens([]);
-    return criada.id;
+    if (!criarConversaEmCurso.current) {
+      criarConversaEmCurso.current = criarConversa(null)
+        .then((criada) => {
+          setConversaActivaId(criada.id);
+          setMensagens([]);
+          setListaEpoch((n) => n + 1);
+          return criada.id;
+        })
+        .finally(() => {
+          criarConversaEmCurso.current = null;
+        });
+    }
+    return criarConversaEmCurso.current;
   }, [conversaActivaId]);
 
   const aoResultado = useCallback(
     async (r: ResultadoBarra) => {
       if (r.tipo !== "procurar") return;
-      const chatId = await garantirConversa();
+      // Usa o chat_id da procura (já criada na barra) — evita segundo POST /chats.
+      const chatId = r.chat_id;
+      setConversaActivaId(chatId);
+      setListaEpoch((n) => n + 1);
       // O motor já gravou o turno; recarrega o fio real.
       try {
         await carregarConversa(chatId);
@@ -129,12 +143,13 @@ export function App() {
         aplicarAssistente(assistente);
       }
     },
-    [aplicarAssistente, carregarConversa, garantirConversa],
+    [aplicarAssistente, carregarConversa],
   );
 
   return (
     <div className="app-chrome">
       <BarraLateral
+        key={listaEpoch}
         conversaActivaId={conversaActivaId}
         onSeleccionar={aoSeleccionar}
       />

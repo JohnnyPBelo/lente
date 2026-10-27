@@ -28,10 +28,18 @@ export function EstadoAprendizagem({
       <p className="barra-lateral__grupo">{copy.learn.group}</p>
       {ecra === "lista" ? (
         <div className="barra-lateral__acoes-aprendizagem">
-          <button type="button" onClick={() => setEcra("exportar")}>
+          <button
+            type="button"
+            className="botao-fantasma"
+            onClick={() => setEcra("exportar")}
+          >
             {copy.learn.export}
           </button>
-          <button type="button" onClick={() => setEcra("importar")}>
+          <button
+            type="button"
+            className="botao-fantasma"
+            onClick={() => setEcra("importar")}
+          >
             {copy.learn.import}
           </button>
         </div>
