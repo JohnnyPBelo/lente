@@ -15,7 +15,7 @@ App de secretária no browser (`127.0.0.1:4317`). Sem Electron. Sem i18n multi-l
 | [barra-lateral.md](barra-lateral.md) | Conversas CRUD, grupo Alertas, estado de aprendizagem |
 | [estados-vazios.md](estados-vazios.md) | Os sete estados vazios do plano |
 | [movimento.md](movimento.md) | Animações curtas obrigatórias |
-| [copy.md](copy.md) | Strings de UI em português de Portugal |
+| [copy.md](copy.md) | Strings de UI em português de Portugal (inclui introdução no primeiro uso) |
 
 ## Ordem de leitura sugerida
 

@@ -166,6 +166,81 @@ export const copy = {
     fan: "Leque de documentos",
     reader: "Leitor de documento",
     mode_menu: "Menu de modos",
+    onboarding: "Introdução à Lente",
+  },
+  onboarding: {
+    title: "Como usar a Lente",
+    ja_vi: "Já vi",
+    seguinte: "Seguinte",
+    anterior: "Anterior",
+    passo_de: "Passo {actual} de {total}",
+    passos: {
+      procura: {
+        titulo: "Procurar",
+        corpo:
+          "Na barra em baixo, escreve a pergunta e Enter envia. A resposta cita trechos com prova na página; se nada passar o limiar, vês o aviso sem documentos inventados.",
+      },
+      correlacionar: {
+        titulo: "Correlacionar",
+        corpo:
+          "No menu + ou /, escolhe Correlacionar. Dois campos — Conceito A e Conceito B — e o fio mostra a relação com três cores e o leque de documentos.",
+      },
+      confrontar: {
+        titulo: "Confrontar",
+        corpo:
+          "Dois lugares (Trecho A e B). Escolher pega numa citação ou trecho fixado; sem citações, podes colar texto. O juiz devolve: concordam, contradizem-se, ou falam de assuntos diferentes.",
+      },
+      alerta: {
+        titulo: "Alerta",
+        corpo:
+          "Um campo: «O que queres que eu vigie?». Até dez alertas. Documentos novos indexados são revistos; os antigos não. O interruptor fica no fio do alerta.",
+      },
+      lacunas: {
+        titulo: "Lacunas",
+        corpo:
+          "Várias linhas — uma por controlo, hipótese ou pergunta. Sai uma lista encontrado / fraco / ausente, com citação para abrir o leitor. Sem o E2B e sem repetição sozinha.",
+      },
+      biblioteca: {
+        titulo: "Biblioteca e ingestão",
+        corpo:
+          "O botão Biblioteca acrescenta ficheiros ou URL. Texto, Markdown, docx, PDF, imagem (OCR) e URL pública. Ficheiros que mudam no disco ficam marcados como desactualizados.",
+      },
+      leque: {
+        titulo: "Leque e leitor",
+        corpo:
+          "Uma miniatura por documento. Um só: o clique abre o leitor. Vários: o leque escolhe qual cresce até ao leitor. Minimizar ou Escape recolhe; prefers-reduced-motion encurta o movimento.",
+      },
+      feedback: {
+        titulo: "Feedback e aprendizagem",
+        corpo:
+          "Na mensagem: Acertou, Corrigir, Descartar — só treina o juiz. Exportar e Importar correções ficam no topo da barra lateral (Aprendizagem), não no menu +.",
+      },
+      dossier: {
+        titulo: "Dossier",
+        corpo:
+          "Fechar dossier grava uma fotografia da prova no SQLite. Reabrir lê essa fotografia; se a fonte mudou depois do fecho, a app avisa e a prova antiga mantém-se.",
+      },
+      alertas: {
+        titulo: "Alertas na barra lateral",
+        corpo:
+          "Por baixo das conversas, o grupo Alertas lista o que criaste. Cada um abre o seu fio; o interruptor liga ou desliga a vigilância.",
+      },
+      backup: {
+        titulo: "Cópia de segurança",
+        corpo:
+          "Na barra lateral, Cópia de segurança compacta a pasta data/ num zip no sítio que escolheres. Sem nuvem nem contas.",
+      },
+      modelos: {
+        titulo: "Modelos",
+        corpo:
+          "Embedding e juiz devem estar prontos para procura com highlights. Sem o escritor (E2B), a app continua com excertos e miniaturas. Se faltarem pesos, a orientação indica o caminho em models/.",
+        pronto: "Pronto",
+        ausente: "Ausente ou a descarregar",
+        embedding: "Embedding",
+        juiz: "Juiz",
+        escritor: "Escritor (E2B)",
+      },
+    },
   },
 } as const;
 

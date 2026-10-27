@@ -219,5 +219,22 @@ Formato sugerido ao copiar citação: `{ficheiro}, p. {página}: «{texto}»`.
 | a11y.sidebar | Barra lateral |
 | a11y.write_bar | Barra de escrita |
 | a11y.mode_menu | Menu de modos |
+| a11y.onboarding | Introdução à Lente |
 
 Sem copy separada para reduced motion: o comportamento muda; os rótulos mantêm-se.
+
+---
+
+## Introdução (primeiro uso)
+
+Diálogo dismissível no arranque. Persistência local: `lente.onboarding.ja_vi`. Forçar de novo: `?onboarding=1` ou limpar essa chave.
+
+| Chave | String |
+| --- | --- |
+| onboarding.title | Como usar a Lente |
+| onboarding.ja_vi | Já vi |
+| onboarding.seguinte | Seguinte |
+| onboarding.anterior | Anterior |
+| onboarding.passo_de | Passo {actual} de {total} |
+
+Os corpos dos passos espelham capacidades reais (modos, biblioteca, leque/leitor, feedback, dossier, alertas, backup, modelos). Ver `apps/ui/src/lib/copy.ts` → `onboarding.passos`.
