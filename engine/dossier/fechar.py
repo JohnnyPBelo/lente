@@ -43,12 +43,15 @@ def _versoes_activas(ligacao: sqlite3.Connection) -> dict[str, str]:
 
 
 def _sha_fecho(caminho: str, sha_citacao: str | None) -> str:
-    try:
-        return sha256_ficheiro(caminho)
-    except FicheiroInexistente:
-        if sha_citacao:
-            return sha_citacao
-        raise
+    """SHA do ficheiro em disco; cai no digest gravado se o caminho falhar."""
+    if caminho and caminho.strip():
+        try:
+            return sha256_ficheiro(caminho)
+        except FicheiroInexistente:
+            pass
+    if sha_citacao:
+        return sha_citacao
+    raise FicheiroInexistente(caminho or ".")
 
 
 def _perguntas_do_ecra(ligacao: sqlite3.Connection, conversa_id: int) -> list[dict[str, Any]]:
@@ -83,12 +86,14 @@ def _frases_aceites(
             m.conteudo,
             c.trecho_literal,
             c.ficheiro,
+            d.caminho,
             c.pagina,
             c.offset_inicio,
             c.offset_fim,
             c.caixas_json,
             c.pontuacao_juiz,
             c.sha256_ficheiro,
+            d.sha256,
             d.titulo
         FROM citacoes c
         JOIN mensagens m ON m.id = c.mensagem_id
@@ -105,16 +110,20 @@ def _frases_aceites(
         indice,
         conteudo,
         trecho,
-        ficheiro,
+        ficheiro_cit,
+        caminho_doc,
         pagina,
         offset_inicio,
         offset_fim,
         caixas_json,
         pontuacao,
         sha_citacao,
+        sha_doc,
         titulo,
     ) in linhas:
-        sha = _sha_fecho(ficheiro, sha_citacao)
+        ficheiro = (ficheiro_cit or "").strip() or str(caminho_doc or "")
+        sha_gravado = sha_citacao or sha_doc
+        sha = _sha_fecho(ficheiro, sha_gravado)
         caixas = json.loads(caixas_json) if caixas_json else []
         frases.append(
             {

@@ -326,35 +326,42 @@ export function App() {
                   );
                 }
                 return (
-                  <MensagemComDocumentos
-                    mensagemId={mensagem.id}
-                    miniaturas={miniaturas}
-                    frases={frasesFonte}
-                    onAbrirDoc={(id) => {
-                      setMiniaturasActivas((prev) =>
-                        prev.some((m) => m.documento_id === id)
-                          ? prev
-                          : [
-                              ...prev,
-                              { documento_id: id, pagina: 1, url: "" },
-                            ],
-                      );
-                    }}
-                    onAbrirCitacao={(d) => {
-                      setMiniaturasActivas((prev) =>
-                        prev.some((m) => m.documento_id === d.documento_id)
-                          ? prev
-                          : [
-                              ...prev,
-                              {
-                                documento_id: d.documento_id,
-                                pagina: d.pagina,
-                                url: "",
-                              },
-                            ],
-                      );
-                    }}
-                  />
+                  <div className="mensagem-docs-com-leitura">
+                    {mensagem.texto ? (
+                      <p className="mensagem-assistente__texto" role="status">
+                        {mensagem.texto}
+                      </p>
+                    ) : null}
+                    <MensagemComDocumentos
+                      mensagemId={mensagem.id}
+                      miniaturas={miniaturas}
+                      frases={frasesFonte}
+                      onAbrirDoc={(id) => {
+                        setMiniaturasActivas((prev) =>
+                          prev.some((m) => m.documento_id === id)
+                            ? prev
+                            : [
+                                ...prev,
+                                { documento_id: id, pagina: 1, url: "" },
+                              ],
+                        );
+                      }}
+                      onAbrirCitacao={(d) => {
+                        setMiniaturasActivas((prev) =>
+                          prev.some((m) => m.documento_id === d.documento_id)
+                            ? prev
+                            : [
+                                ...prev,
+                                {
+                                  documento_id: d.documento_id,
+                                  pagina: d.pagina,
+                                  url: "",
+                                },
+                              ],
+                        );
+                      }}
+                    />
+                  </div>
                 );
               }}
             />

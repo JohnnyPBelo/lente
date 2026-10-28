@@ -191,23 +191,33 @@ def gravar_turno_procura(
         except ValueError:
             continue
         offsets = ex.get("offsets") or {}
+        doc_row = ligacao.execute(
+            "SELECT caminho, sha256 FROM documentos WHERE id = ?",
+            (doc_num,),
+        ).fetchone()
+        caminho = ""
+        sha_doc: str | None = None
+        if doc_row is not None:
+            caminho = str(doc_row[0] or "")
+            sha_doc = str(doc_row[1]) if doc_row[1] else None
         ligacao.execute(
             "INSERT INTO citacoes "
             "(mensagem_id, documento_id, frase_id, indice, trecho_literal, "
             " ficheiro, pagina, offset_inicio, offset_fim, caixas_json, "
             " pontuacao_juiz, sha256_ficheiro) "
-            "VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+            "VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 mensagem_numero,
                 doc_num,
                 int(ex.get("n") or 0),
                 ex.get("texto") or "",
-                "",
+                caminho,
                 ex.get("pagina"),
                 offsets.get("inicio"),
                 offsets.get("fim"),
                 json.dumps(ex.get("caixas") or [], ensure_ascii=False),
                 ex.get("score_juiz"),
+                sha_doc,
             ),
         )
     ligacao.execute(
