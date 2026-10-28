@@ -65,6 +65,18 @@ export function LequeLeitor({
     onRegistarAbrirCitacao?.(abrirCitacao);
   }, [abrirCitacao, onRegistarAbrirCitacao]);
 
+  // Citação «Abrir na página» chega depois do leque já montado (issue #73).
+  useEffect(() => {
+    if (!destinoInicial?.documento_id) return;
+    abrirCitacao(destinoInicial);
+  }, [
+    destinoInicial?.documento_id,
+    destinoInicial?.pagina,
+    destinoInicial?.n,
+    abrirCitacao,
+    destinoInicial,
+  ]);
+
   const minimizar = useCallback(() => {
     setLeitorAberto(false);
     setHighlightN(null);

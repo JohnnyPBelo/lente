@@ -93,9 +93,18 @@ def confrontar(
 
         cos_fn = cosseno or _jaccard
         pont_fn = pontuar or _jaccard
-        cos = float(cos_fn(a.texto, b.texto))
-        j_ab = float(pont_fn(a.texto, b.texto))
-        j_ba = float(pont_fn(b.texto, a.texto))
+        try:
+            cos = float(cos_fn(a.texto, b.texto))
+        except Exception:  # noqa: BLE001 — nunca 500 no confronto
+            cos = float(_jaccard(a.texto, b.texto))
+        try:
+            j_ab = float(pont_fn(a.texto, b.texto))
+        except Exception:  # noqa: BLE001
+            j_ab = float(_jaccard(a.texto, b.texto))
+        try:
+            j_ba = float(pont_fn(b.texto, a.texto))
+        except Exception:  # noqa: BLE001
+            j_ba = float(_jaccard(b.texto, a.texto))
 
     leitura = leitura_confronto(cos=cos, j_ab=j_ab, j_ba=j_ba)
     score = round((j_ab + j_ba) / 2.0, 4)
@@ -103,9 +112,9 @@ def confrontar(
         "mensagem_id": mensagem_id,
         "leitura": leitura,
         "score": score,
-        "cos": cos,
-        "j_ab": j_ab,
-        "j_ba": j_ba,
+        "cos": round(float(cos), 4),
+        "j_ab": round(float(j_ab), 4),
+        "j_ba": round(float(j_ba), 4),
         "trecho_a": {
             "documento_id": a.documento_id,
             "pagina": a.pagina,

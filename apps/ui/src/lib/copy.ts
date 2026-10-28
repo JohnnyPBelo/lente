@@ -55,6 +55,8 @@ export const copy = {
     send: "Enviar",
     menu_hint: "Escolhe um modo",
     threshold: "Limiar",
+    threshold_raw: "Limiar bruto",
+    threshold_uncalibrated: "sem calibração",
   },
   confront: {
     reading_agree: "Concordam",
@@ -93,6 +95,8 @@ export const copy = {
     empty_title: "Nova conversa",
     empty_body: "Escreve a primeira procura na barra em baixo.",
     threshold: "Limiar",
+    threshold_raw: "Limiar bruto",
+    threshold_uncalibrated: "sem calibração",
     open_source: "Abrir na página",
     dossier: {
       close: "Fechar dossier",

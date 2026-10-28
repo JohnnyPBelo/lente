@@ -28,7 +28,7 @@ from engine.api.rotas_modelos import rotas_modelos
 from engine.api.rotas_modos import rotas_modos
 from engine.armazenamento.repositorio import abrir
 from engine.escalonador.slot import SlotPesado
-from engine.pesquisa.limiar import limiar_visivel
+from engine.pesquisa.limiar import estado_limiar, limiar_visivel
 from engine.runtime.descarregar import criar_descarregador
 from engine.runtime.pesos import estados_health
 
@@ -64,6 +64,7 @@ async def health(request: Request) -> JSONResponse:
                 if ficheiro.stat().st_size >= 1024 * 1024
                 else 0
             )
+    limiar = estado_limiar()
     return JSONResponse(
         {
             "ok": True,
@@ -72,6 +73,7 @@ async def health(request: Request) -> JSONResponse:
             "disco_data_mb": disco,
             "procura": procura,
             "limiar": limiar_visivel(),
+            "platt_activo": limiar.platt_activo,
         }
     )
 
@@ -160,8 +162,107 @@ def criar_app(
     app.state.pasta_data = caminho.parent if caminho is not None else None
     app.state.forcar_estado_modelos = forcar_estado_modelos
     app.state.descarregar_modelo = downloader
+    _ligar_confronto(app, raiz_m)
 
     for mount in montar_estaticos(raiz_ui):
         app.routes.append(mount)
 
     return app
+
+
+def _ligar_confronto(app: Starlette, raiz_modelos: Path | None) -> None:
+    """Liga juiz + embedding ao HTTP-confront (issue #76).
+
+    Sem pesos: deixa ``None`` e ``confrontar`` cai no Jaccard lexical honesto.
+    Com pesos: cosseno 256d + σ(score ONNX) nas duas direcções.
+    """
+    if raiz_modelos is None:
+        return
+
+    from engine.runtime.pesos import estado_modelos
+
+    estado = estado_modelos(raiz_modelos)
+    tem_juiz = estado.get("juiz", {}).get("estado") == "pronto"
+    tem_emb = estado.get("embedding", {}).get("estado") == "pronto"
+    if not tem_juiz and not tem_emb:
+        return
+
+    cache: dict[str, Any] = {
+        "juiz": None,
+        "emb": None,
+        "falha_juiz": False,
+        "falha_emb": False,
+    }
+    raiz = raiz_modelos
+
+    def _sessao_juiz() -> Any | None:
+        if not tem_juiz or cache["falha_juiz"]:
+            return None
+        if cache["juiz"] is None:
+            try:
+                from engine.juiz.carregar import carregar_sessao
+
+                cache["juiz"] = carregar_sessao(raiz_modelos=raiz)
+            except Exception:  # noqa: BLE001 — degrada a Jaccard
+                cache["falha_juiz"] = True
+                return None
+        return cache["juiz"]
+
+    def _sessao_emb() -> Any | None:
+        if not tem_emb or cache["falha_emb"]:
+            return None
+        if cache["emb"] is None:
+            try:
+                from engine.embeddings.carregar import carregar_modelo
+
+                cache["emb"] = carregar_modelo(raiz_modelos=raiz, dispositivo="cpu")
+            except Exception:  # noqa: BLE001 — degrada a Jaccard
+                cache["falha_emb"] = True
+                return None
+        return cache["emb"]
+
+    def _sigmoide(x: float) -> float:
+        import math
+
+        if x >= 0:
+            z = math.exp(-x)
+            return 1.0 / (1.0 + z)
+        z = math.exp(x)
+        return z / (1.0 + z)
+
+    def _jaccard(x: str, y: str) -> float:
+        ax = {t.lower() for t in x.split() if t}
+        by = {t.lower() for t in y.split() if t}
+        if not ax or not by:
+            return 0.0
+        return len(ax & by) / len(ax | by)
+
+    def pontuar(a: str, b: str) -> float:
+        sessao = _sessao_juiz()
+        if sessao is None:
+            return _jaccard(a, b)
+        try:
+            bruto = float(sessao.avaliar(a, [b])[0])
+            return _sigmoide(bruto)
+        except Exception:  # noqa: BLE001
+            return _jaccard(a, b)
+
+    def cosseno(a: str, b: str) -> float:
+        sessao = _sessao_emb()
+        if sessao is None:
+            return _jaccard(a, b)
+        try:
+            from engine.embeddings.carregar import embutir
+
+            va = embutir(a, sessao=sessao)
+            vb = embutir(b, sessao=sessao)
+            return float(
+                sum(float(x) * float(y) for x, y in zip(va, vb, strict=True))
+            )
+        except Exception:  # noqa: BLE001
+            return _jaccard(a, b)
+
+    if tem_juiz:
+        app.state.pontuar_confronto = pontuar
+    if tem_emb:
+        app.state.cosseno_confronto = cosseno
