@@ -22,6 +22,7 @@ from engine.armazenamento.repositorio import abrir
 from engine.dossier.exportar import exportar_dossier
 from engine.dossier.fechar import fechar_dossier
 from engine.dossier.reabrir import reabrir_dossier
+from engine.ingestao.tipos import FicheiroInexistente
 
 
 def _ligacao(request: Request) -> sqlite3.Connection:
@@ -54,7 +55,7 @@ async def fechar(request: Request) -> Response:
     try:
         resultado = fechar_dossier(ligacao, conversa)
         ligacao.commit()
-    except ValueError as exc:
+    except (ValueError, FicheiroInexistente) as exc:
         return resposta_erro(400, PEDIDO_INVALIDO, str(exc))
     return _json(resultado, status=201)
 
