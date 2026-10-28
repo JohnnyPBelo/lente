@@ -2,6 +2,10 @@
 
 Quando EmbeddingGemma não está em disco, a biblioteca continua utilizável:
 o texto fica pesquisável por FTS e a procura devolve excertos literais.
+
+Documentos grandes (Gutenberg) são cortados em blocos ~500 palavras — a unidade
+de retrieval FTS — e as frases ficam na tabela ``frases`` para highlight, sem
+duplicar cada frase no índice FTS (ADR-012).
 """
 
 from __future__ import annotations
@@ -10,9 +14,10 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from engine.embeddings.cortar import cortar_blocos, TokenizadorPalavras
 from engine.embeddings.frases import segmentar_frases
 from engine.embeddings.indexar import gerar_miniatura
-from engine.pesquisa.fts import indexar_bloco, indexar_frase
+from engine.pesquisa.fts import indexar_bloco
 
 
 def _agora() -> str:
@@ -39,7 +44,7 @@ def indexar_texto_fts(
     hash_id: int | None = None,
     pasta_miniaturas: Path | str | None = None,
 ) -> int:
-    """Grava um bloco + frases e popula FTS. Devolve o número de frases."""
+    """Grava blocos + frases e popula FTS (só blocos). Devolve o nº de frases."""
     corpo = (texto or "").strip()
     if not corpo:
         ligacao.execute(
@@ -60,7 +65,7 @@ def indexar_texto_fts(
             raise LookupError(f"hash activa em falta para documento {documento_id}")
         hash_id = int(linha["id"] if hasattr(linha, "keys") else linha[0])
 
-    # Limpa geração anterior deste hash (reindexação)
+    # Limpa geração anterior deste hash (reindexação) — uma transacção.
     ligacao.execute(
         "DELETE FROM frases WHERE bloco_id IN "
         "(SELECT id FROM blocos WHERE hash_id = ?)",
@@ -69,55 +74,69 @@ def indexar_texto_fts(
     ligacao.execute("DELETE FROM blocos WHERE hash_id = ?", (hash_id,))
     ligacao.execute("DELETE FROM fts_texto WHERE hash_id = ?", (hash_id,))
 
-    cur = ligacao.execute(
-        "INSERT INTO blocos ("
-        "documento_id, hash_id, ordem, texto, "
-        "pagina_inicio, pagina_fim, offset_inicio, offset_fim, tokens_aprox"
-        ") VALUES (?, ?, 0, ?, 1, 1, 0, ?, ?)",
-        (
-            documento_id,
-            hash_id,
-            corpo,
-            len(corpo),
-            max(1, len(corpo.split())),
-        ),
-    )
-    bloco_id = int(cur.lastrowid)
-    indexar_bloco(
-        ligacao,
-        bloco_id=bloco_id,
-        texto=corpo,
-        documento_id=documento_id,
-        hash_id=hash_id,
-    )
+    blocos = cortar_blocos(corpo, tokenizador=TokenizadorPalavras())
+    if not blocos:
+        # Texto sem «palavras» detectáveis — um bloco único.
+        from engine.embeddings.cortar import BlocoCortado
 
-    frases = segmentar_frases(corpo, offset_base=0)
-    if not frases:
-        # Um único «bloco» como frase se a segmentação não partir nada
-        cur_f = ligacao.execute(
-            "INSERT INTO frases ("
-            "bloco_id, documento_id, pagina, texto, "
-            "offset_inicio, offset_fim, caixas_json, ordem"
-            ") VALUES (?, ?, 1, ?, 0, ?, NULL, 0)",
-            (bloco_id, documento_id, corpo, len(corpo)),
+        blocos = [
+            BlocoCortado(
+                texto=corpo,
+                offset_inicio=0,
+                offset_fim=len(corpo),
+                tokens_aprox=max(1, len(corpo.split())),
+                ordem=0,
+            )
+        ]
+
+    total_frases = 0
+    # Retrieval FTS = blocos (ADR-012). Frases ficam só na tabela ``frases``
+    # para highlight; a procura refina o excerto a partir delas.
+    frases_rows: list[tuple[int, int, int, str, int, int, int]] = []
+
+    for bloco in blocos:
+        cur = ligacao.execute(
+            "INSERT INTO blocos ("
+            "documento_id, hash_id, ordem, texto, "
+            "pagina_inicio, pagina_fim, offset_inicio, offset_fim, tokens_aprox"
+            ") VALUES (?, ?, ?, ?, 1, 1, ?, ?, ?)",
+            (
+                documento_id,
+                hash_id,
+                bloco.ordem,
+                bloco.texto,
+                bloco.offset_inicio,
+                bloco.offset_fim,
+                bloco.tokens_aprox,
+            ),
         )
-        frase_id = int(cur_f.lastrowid)
-        indexar_frase(
+        bloco_id = int(cur.lastrowid)
+        indexar_bloco(
             ligacao,
-            frase_id=frase_id,
-            texto=corpo,
+            bloco_id=bloco_id,
+            texto=bloco.texto,
             documento_id=documento_id,
             hash_id=hash_id,
         )
-        total = 1
-    else:
-        total = 0
+
+        frases = segmentar_frases(bloco.texto, offset_base=bloco.offset_inicio)
+        if not frases:
+            frases_rows.append(
+                (
+                    bloco_id,
+                    documento_id,
+                    1,
+                    bloco.texto,
+                    bloco.offset_inicio,
+                    bloco.offset_fim,
+                    0,
+                )
+            )
+            total_frases += 1
+            continue
+
         for frase in frases:
-            cur_f = ligacao.execute(
-                "INSERT INTO frases ("
-                "bloco_id, documento_id, pagina, texto, "
-                "offset_inicio, offset_fim, caixas_json, ordem"
-                ") VALUES (?, ?, ?, ?, ?, ?, NULL, ?)",
+            frases_rows.append(
                 (
                     bloco_id,
                     documento_id,
@@ -126,17 +145,18 @@ def indexar_texto_fts(
                     frase.offset_inicio,
                     frase.offset_fim,
                     frase.ordem,
-                ),
+                )
             )
-            frase_id = int(cur_f.lastrowid)
-            indexar_frase(
-                ligacao,
-                frase_id=frase_id,
-                texto=frase.texto,
-                documento_id=documento_id,
-                hash_id=hash_id,
-            )
-            total += 1
+            total_frases += 1
+
+    if frases_rows:
+        ligacao.executemany(
+            "INSERT INTO frases ("
+            "bloco_id, documento_id, pagina, texto, "
+            "offset_inicio, offset_fim, caixas_json, ordem"
+            ") VALUES (?, ?, ?, ?, ?, ?, NULL, ?)",
+            frases_rows,
+        )
 
     momento = _agora()
     miniatura_caminho: str | None = None
@@ -159,4 +179,4 @@ def indexar_texto_fts(
             (momento, momento, documento_id),
         )
     ligacao.commit()
-    return total
+    return total_frases

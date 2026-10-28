@@ -10,7 +10,7 @@ from typing import Any, Callable
 from engine.api.ids import doc_id
 from engine.armazenamento.repositorio import abrir
 from engine.ingestao.indexar_minimo import url_miniatura
-from engine.pesquisa.fts import HitFts, procurar_fts
+from engine.pesquisa.fts import HitFts, procurar_fts, tokens_consulta
 from engine.runtime.pesos import estado_modelos
 
 MotorProcura = Callable[..., dict[str, Any]]
@@ -110,6 +110,50 @@ def _url_miniatura_doc(
     return url_miniatura(documento_numero, pagina)
 
 
+def _refinar_hit_para_frase(
+    ligacao: sqlite3.Connection, hit: HitFts, termo: str
+) -> HitFts:
+    """Se o hit é um bloco, escolhe uma frase citável que contenha os tokens."""
+    if hit.origem != "bloco":
+        return hit
+    tokens = [t.casefold() for t in tokens_consulta(termo)]
+    linhas = ligacao.execute(
+        "SELECT id, texto, documento_id FROM frases "
+        "WHERE bloco_id = ? ORDER BY ordem",
+        (hit.origem_id,),
+    ).fetchall()
+    escolhida = None
+    for linha in linhas:
+        texto_f = str(linha["texto"] or "")
+        baixo = texto_f.casefold()
+        if tokens and all(tok in baixo for tok in tokens):
+            escolhida = linha
+            break
+    if escolhida is None and linhas:
+        # Sem match exacto de todos os tokens: primeira frase não vazia.
+        for linha in linhas:
+            if str(linha["texto"] or "").strip():
+                escolhida = linha
+                break
+    if escolhida is None:
+        # Excerto truncado do bloco para não devolver o livro inteiro.
+        trecho = (hit.texto or "")[:400]
+        return HitFts(
+            origem=hit.origem,
+            origem_id=hit.origem_id,
+            documento_id=hit.documento_id,
+            hash_id=hit.hash_id,
+            texto=trecho,
+        )
+    return HitFts(
+        origem="frase",
+        origem_id=int(escolhida["id"]),
+        documento_id=int(escolhida["documento_id"]),
+        hash_id=hit.hash_id,
+        texto=str(escolhida["texto"]),
+    )
+
+
 def motor_procura_fts(caminho_sqlite: Path | str) -> MotorProcura:
     """Procura lexical no mesmo SQLite; sem embeddings/juiz (modelos ausentes)."""
 
@@ -125,49 +169,54 @@ def motor_procura_fts(caminho_sqlite: Path | str) -> MotorProcura:
         **_kwargs: Any,
     ) -> dict[str, Any]:
         del chat_id, lente, pagina_aberta, com_e2b
+        termo = texto.strip()
         ligacao = abrir(caminho)
-        hits = procurar_fts(ligacao, texto.strip(), limite=40)
-        hits = sorted(hits, key=lambda h: 0 if h.origem == "frase" else 1)
-        excertos: list[dict[str, Any]] = []
-        miniaturas: list[dict[str, Any]] = []
-        vistos_doc: set[str] = set()
-        vistos_texto: set[str] = set()
-        for hit in hits:
-            chave = (hit.texto or "").strip()
-            if chave in vistos_texto:
-                continue
-            vistos_texto.add(chave)
-            offsets, pagina = _offsets_e_pagina(ligacao, hit)
-            numero = int(hit.documento_id)
-            documento = doc_id(numero)
-            excertos.append(
-                {
-                    "n": len(excertos) + 1,
-                    "documento_id": documento,
-                    "pagina": pagina,
-                    "texto": hit.texto,
-                    "offsets": offsets,
-                    "caixas": [],
-                    "score_juiz": 1.0,
-                }
-            )
-            if documento not in vistos_doc:
-                vistos_doc.add(documento)
-                miniaturas.append(
+        try:
+            hits = procurar_fts(ligacao, termo, limite=40)
+            hits = [_refinar_hit_para_frase(ligacao, h, termo) for h in hits]
+            hits = sorted(hits, key=lambda h: 0 if h.origem == "frase" else 1)
+            excertos: list[dict[str, Any]] = []
+            miniaturas: list[dict[str, Any]] = []
+            vistos_doc: set[str] = set()
+            vistos_texto: set[str] = set()
+            for hit in hits:
+                chave = (hit.texto or "").strip()
+                if chave in vistos_texto:
+                    continue
+                vistos_texto.add(chave)
+                offsets, pagina = _offsets_e_pagina(ligacao, hit)
+                numero = int(hit.documento_id)
+                documento = doc_id(numero)
+                excertos.append(
                     {
+                        "n": len(excertos) + 1,
                         "documento_id": documento,
                         "pagina": pagina,
-                        "url": _url_miniatura_doc(ligacao, numero, pagina),
+                        "texto": hit.texto,
+                        "offsets": offsets,
+                        "caixas": [],
+                        "score_juiz": 1.0,
                     }
                 )
-            if len(excertos) >= 20:
-                break
-        return {
-            "excertos": excertos,
-            "frases": [],
-            "miniaturas": miniaturas,
-            "motor": "fts",
-        }
+                if documento not in vistos_doc:
+                    vistos_doc.add(documento)
+                    miniaturas.append(
+                        {
+                            "documento_id": documento,
+                            "pagina": pagina,
+                            "url": _url_miniatura_doc(ligacao, numero, pagina),
+                        }
+                    )
+                if len(excertos) >= 20:
+                    break
+            return {
+                "excertos": excertos,
+                "frases": [],
+                "miniaturas": miniaturas,
+                "motor": "fts",
+            }
+        finally:
+            ligacao.close()
 
     _motor.modo = "fts"  # type: ignore[attr-defined]
     return _motor

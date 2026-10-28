@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Sequence
@@ -12,6 +13,10 @@ from engine.embeddings.dispositivo import (
     dtype_para,
     validar_dtype,
 )
+
+# Evita forks/semáforos do tokenizers sob stress de centenas de embeds.
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 MODELO_ID = "google/embeddinggemma-2"
 PASTA_MODELO = "embeddinggemma-2"
@@ -144,18 +149,40 @@ def embutir(
     ja_prefixado: bool = True,
 ) -> list[float]:
     """Embedding 256d L2-normalizado em float32 lógico; sem caminho float16."""
+    del ja_prefixado
+    return embutir_lote([texto], sessao=sessao)[0]
+
+
+def embutir_lote(
+    textos: Sequence[str],
+    *,
+    sessao: SessaoEmbedding,
+    tamanho_lote: int = 16,
+) -> list[list[float]]:
+    """Embute vários textos num ou mais passes (batch) — menos overhead ONNX/torch."""
     if sessao.dtype == DTYPE_PROIBIDO:
         raise RuntimeError("float16 proibido no caminho de embedding")
     validar_dtype(sessao.dtype)
+    if not textos:
+        return []
 
-    nativo = sessao.encode(texto)[0]
-    if len(nativo) < DIMENSAO:
-        raise ValueError(
-            f"vector nativo demasiado curto: {len(nativo)} < {DIMENSAO}"
-        )
-    # Matryoshka: cortar 256 e renormalizar L2 (obrigatório).
-    cortado = nativo[:DIMENSAO]
-    return _normalizar_l2(_para_float32(cortado))
+    saida: list[list[float]] = []
+    lote_tam = max(1, int(tamanho_lote))
+    for inicio in range(0, len(textos), lote_tam):
+        pedaco = list(textos[inicio : inicio + lote_tam])
+        nativos = sessao.encode(pedaco)
+        if len(nativos) != len(pedaco):
+            raise RuntimeError(
+                f"encode devolveu {len(nativos)} vectores para {len(pedaco)} textos"
+            )
+        for nativo in nativos:
+            if len(nativo) < DIMENSAO:
+                raise ValueError(
+                    f"vector nativo demasiado curto: {len(nativo)} < {DIMENSAO}"
+                )
+            cortado = nativo[:DIMENSAO]
+            saida.append(_normalizar_l2(_para_float32(cortado)))
+    return saida
 
 
 def _pasta_tem_pesos(pasta: Path) -> bool:
@@ -281,6 +308,7 @@ __all__ = [
     "caminho_pesos",
     "carregar_modelo",
     "embutir",
+    "embutir_lote",
     "limpar_cache_sessoes",
     "pasta_embedding",
 ]
