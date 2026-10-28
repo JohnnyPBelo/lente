@@ -12,7 +12,7 @@ from typing import Any, Callable, Sequence
 from engine.embeddings.carregar import (
     DIMENSAO,
     SessaoEmbedding,
-    embutir,
+    embutir_lote,
 )
 from engine.embeddings.cortar import BlocoCortado, cortar_blocos
 from engine.embeddings.frases import FraseSegmentada, segmentar_frases
@@ -114,9 +114,10 @@ def indexar_documento(
     total_frases = 0
     miniatura_caminho: str | None = None
 
-    for bloco in blocos:
-        entrada = prefixo_documento(titulo, bloco.texto)
-        vector = embutir(entrada, sessao=sessao)
+    entradas = [prefixo_documento(titulo, b.texto) for b in blocos]
+    vectores = embutir_lote(entradas, sessao=sessao) if entradas else []
+
+    for bloco, vector in zip(blocos, vectores, strict=True):
         bloco_id = _inserir_bloco(
             ligacao,
             documento_id=documento_id,
@@ -212,7 +213,7 @@ def construir_png_miniatura(
     return (
         b"\x89PNG\r\n\x1a\n"
         + chunk(b"IHDR", ihdr)
-        + chunk(b"IDAT", zlib.compress(b"".join(pixels), 9))
+        + chunk(b"IDAT", zlib.compress(b"".join(pixels), 6))
         + chunk(b"IEND", b"")
     )
 

@@ -159,7 +159,7 @@ def _tentar_vectores(
     raiz_modelos: Path,
 ) -> None:
     from engine.api.motor import embedding_pronto
-    from engine.embeddings.carregar import carregar_modelo, embutir
+    from engine.embeddings.carregar import carregar_modelo, embutir_lote
     from engine.embeddings.prefixos import prefixo_documento
     from engine.pesquisa.vec import guardar_vector
 
@@ -170,23 +170,22 @@ def _tentar_vectores(
         return
     try:
         sessao = carregar_modelo(raiz_modelos=raiz_modelos, dispositivo="cpu")
-        linha = ligacao.execute(
-            "SELECT id, hash_id FROM blocos WHERE documento_id = ? ORDER BY id",
+        linhas = ligacao.execute(
+            "SELECT id, hash_id, texto FROM blocos "
+            "WHERE documento_id = ? ORDER BY ordem, id",
             (documento_id,),
         ).fetchall()
-        for bloco in linha:
-            bloco_id = int(bloco["id"])
-            hash_id = int(bloco["hash_id"])
-            entrada = prefixo_documento(titulo, str(
-                ligacao.execute(
-                    "SELECT texto FROM blocos WHERE id = ?", (bloco_id,)
-                ).fetchone()["texto"]
-            ))
-            vector = embutir(entrada, sessao=sessao)
+        if not linhas:
+            return
+        entradas = [
+            prefixo_documento(titulo, str(bloco["texto"])) for bloco in linhas
+        ]
+        vectores = embutir_lote(entradas, sessao=sessao)
+        for bloco, vector in zip(linhas, vectores, strict=True):
             guardar_vector(
                 ligacao,
-                bloco_id=bloco_id,
-                hash_id=hash_id,
+                bloco_id=int(bloco["id"]),
+                hash_id=int(bloco["hash_id"]),
                 vector=vector,
             )
     except Exception:
@@ -211,27 +210,32 @@ async def ingerir_biblioteca(request: Request) -> Response:
         destino = _destino_url(pasta, url_limpa)
         ligacao = _ligacao(request)
         try:
-            registo = ingestir_url(ligacao, url_limpa, destino)
-            raiz_m = getattr(request.app.state, "raiz_modelos", None)
-            _indexar_registo(
-                ligacao,
-                registo.id,
-                Path(registo.caminho),
-                thumbs,
-                raiz_modelos=Path(raiz_m) if raiz_m is not None else None,
+            try:
+                registo = ingestir_url(ligacao, url_limpa, destino)
+                raiz_m = getattr(request.app.state, "raiz_modelos", None)
+                _indexar_registo(
+                    ligacao,
+                    registo.id,
+                    Path(registo.caminho),
+                    thumbs,
+                    raiz_modelos=Path(raiz_m) if raiz_m is not None else None,
+                )
+            except UrlRecusada:
+                return resposta_erro(
+                    400,
+                    URL_PRIVADA,
+                    "Endereço privado recusado.",
+                )
+            except Exception as exc:  # noqa: BLE001 — erro observável ao cliente
+                return resposta_erro(
+                    400, PEDIDO_INVALIDO, str(exc) or "falha na ingestão"
+                )
+            return JSONResponse(
+                {"documento_id": doc_id(registo.id), "estado": "ok"},
+                status_code=202,
             )
-        except UrlRecusada:
-            return resposta_erro(
-                400,
-                URL_PRIVADA,
-                "Endereço privado recusado.",
-            )
-        except Exception as exc:  # noqa: BLE001 — erro observável ao cliente
-            return resposta_erro(400, PEDIDO_INVALIDO, str(exc) or "falha na ingestão")
-        return JSONResponse(
-            {"documento_id": doc_id(registo.id), "estado": "ok"},
-            status_code=202,
-        )
+        finally:
+            ligacao.close()
 
     form = await request.form()
     ficheiro = form.get("ficheiros") or form.get("ficheiro") or form.get("file")
@@ -270,25 +274,28 @@ async def ingerir_biblioteca(request: Request) -> Response:
 
     ligacao = _ligacao(request)
     try:
-        registo = registar_ficheiro(ligacao, destino)
-        raiz_m = getattr(request.app.state, "raiz_modelos", None)
-        _indexar_registo(
-            ligacao,
-            registo.id,
-            destino,
-            thumbs,
-            raiz_modelos=Path(raiz_m) if raiz_m is not None else None,
-        )
-    except (TipoNaoSuportado, FicheiroInexistente) as exc:
-        destino.unlink(missing_ok=True)
-        return resposta_erro(400, PEDIDO_INVALIDO, str(exc))
-    except Exception as exc:  # noqa: BLE001 — erro observável ao cliente
-        return resposta_erro(400, PEDIDO_INVALIDO, str(exc) or "falha na ingestão")
+        try:
+            registo = registar_ficheiro(ligacao, destino)
+            raiz_m = getattr(request.app.state, "raiz_modelos", None)
+            _indexar_registo(
+                ligacao,
+                registo.id,
+                destino,
+                thumbs,
+                raiz_modelos=Path(raiz_m) if raiz_m is not None else None,
+            )
+        except (TipoNaoSuportado, FicheiroInexistente) as exc:
+            destino.unlink(missing_ok=True)
+            return resposta_erro(400, PEDIDO_INVALIDO, str(exc))
+        except Exception as exc:  # noqa: BLE001 — erro observável ao cliente
+            return resposta_erro(400, PEDIDO_INVALIDO, str(exc) or "falha na ingestão")
 
-    return JSONResponse(
-        {"documento_id": doc_id(registo.id), "estado": "ok"},
-        status_code=202,
-    )
+        return JSONResponse(
+            {"documento_id": doc_id(registo.id), "estado": "ok"},
+            status_code=202,
+        )
+    finally:
+        ligacao.close()
 
 
 async def etiquetar_documento(request: Request) -> Response:

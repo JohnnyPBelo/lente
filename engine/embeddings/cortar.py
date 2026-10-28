@@ -17,6 +17,29 @@ class TokenizadorOffsets(Protocol):
     def offsets_tokens(self, texto: str) -> list[tuple[int, int]]: ...
 
 
+class TokenizadorPalavras:
+    """Aproximação estável sem pesos: uma palavra = um token (offsets de carácter).
+
+    Usado no caminho FTS-only e em testes — o EmbeddingGemma real substitui
+    isto quando os pesos estão em disco.
+    """
+
+    def offsets_tokens(self, texto: str) -> list[tuple[int, int]]:
+        offsets: list[tuple[int, int]] = []
+        inicio: int | None = None
+        for indice, ch in enumerate(texto):
+            if ch.isspace():
+                if inicio is not None:
+                    offsets.append((inicio, indice))
+                    inicio = None
+            else:
+                if inicio is None:
+                    inicio = indice
+        if inicio is not None:
+            offsets.append((inicio, len(texto)))
+        return offsets
+
+
 @dataclass(frozen=True)
 class BlocoCortado:
     """Um bloco pronto a embutir, com offsets no texto do documento."""
@@ -84,5 +107,6 @@ __all__ = [
     "TOKENS_BLOCO",
     "BlocoCortado",
     "TokenizadorOffsets",
+    "TokenizadorPalavras",
     "cortar_blocos",
 ]

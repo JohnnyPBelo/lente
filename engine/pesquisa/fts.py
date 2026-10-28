@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from dataclasses import dataclass
+from typing import Sequence
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,11 @@ def _consulta_segura(termo: str) -> str:
     return " AND ".join(f'"{t}"' for t in tokens)
 
 
+def tokens_consulta(termo: str) -> list[str]:
+    """Tokens literais da consulta (mesma regra que o MATCH)."""
+    return _TOKEN.findall(termo)
+
+
 def indexar_bloco(
     ligacao: sqlite3.Connection,
     *,
@@ -38,7 +44,10 @@ def indexar_bloco(
     documento_id: int,
     hash_id: int,
 ) -> None:
-    """Insere (ou substitui) o texto de um bloco no FTS5."""
+    """Insere (ou substitui) o texto de um bloco no FTS5.
+
+    Não faz ``commit`` — o chamador confirma a transacção do documento.
+    """
     ligacao.execute(
         "DELETE FROM fts_texto WHERE origem = 'bloco' AND origem_id = ?",
         (bloco_id,),
@@ -48,7 +57,6 @@ def indexar_bloco(
         "VALUES (?, 'bloco', ?, ?, ?)",
         (texto, bloco_id, documento_id, hash_id),
     )
-    ligacao.commit()
 
 
 def indexar_frase(
@@ -59,7 +67,10 @@ def indexar_frase(
     documento_id: int,
     hash_id: int,
 ) -> None:
-    """Insere (ou substitui) o texto de uma frase no FTS5."""
+    """Insere (ou substitui) o texto de uma frase no FTS5.
+
+    Não faz ``commit`` — o chamador confirma a transacção do documento.
+    """
     ligacao.execute(
         "DELETE FROM fts_texto WHERE origem = 'frase' AND origem_id = ?",
         (frase_id,),
@@ -69,13 +80,28 @@ def indexar_frase(
         "VALUES (?, 'frase', ?, ?, ?)",
         (texto, frase_id, documento_id, hash_id),
     )
-    ligacao.commit()
+
+
+def indexar_frases_lote(
+    ligacao: sqlite3.Connection,
+    linhas: Sequence[tuple[str, int, int, int]],
+) -> None:
+    """Insere várias frases no FTS5 num único ``executemany``.
+
+    Cada tuplo: ``(texto, frase_id, documento_id, hash_id)``.
+    """
+    if not linhas:
+        return
+    ligacao.executemany(
+        "INSERT INTO fts_texto (texto, origem, origem_id, documento_id, hash_id) "
+        "VALUES (?, 'frase', ?, ?, ?)",
+        [(texto, frase_id, documento_id, hash_id) for texto, frase_id, documento_id, hash_id in linhas],
+    )
 
 
 def apagar_fts_hash(ligacao: sqlite3.Connection, hash_id: int) -> None:
     """Remove linhas FTS de uma geração (reindexação / delete)."""
     ligacao.execute("DELETE FROM fts_texto WHERE hash_id = ?", (hash_id,))
-    ligacao.commit()
 
 
 def procurar_fts(ligacao: sqlite3.Connection, termo: str, *, limite: int = 50) -> list[HitFts]:
