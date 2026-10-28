@@ -188,3 +188,8 @@ apps/ui/src/components/onboarding/onboarding.test.tsx
 tests/ingestao/test_indexar_grande.py::test_indexar_texto_grande_em_blocos
 tests/embeddings/test_embutir_lote.py::test_embutir_lote_agrupa_passes
 tests/api/test_procura_refina_frase.py::test_procura_refina_excerto_a_frase
+tests/api/test_modos.py::test_confrontar_texto_colado_sem_injectaveis_nao_fica_tudo_zero
+tests/api/test_modos.py::test_confrontar_usa_pontuar_e_cosseno_injectados
+apps/ui/src/components/leque/reg-cht-citacao-abre-leitor.test.tsx
+apps/ui/src/components/chat/reg-lacunas-ausente.test.tsx
+apps/ui/src/components/chat/reg-correlacionar-legendas-app.test.tsx

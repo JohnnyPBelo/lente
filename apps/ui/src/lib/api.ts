@@ -39,6 +39,26 @@ export type MiniaturaMsg = {
   url?: string;
 };
 
+export type CitacaoLacuna = {
+  documento_id: string;
+  pagina: number;
+  texto?: string;
+};
+
+export type ItemLacunaMsg = {
+  linha: string;
+  estado: "encontrado" | "fraco" | "ausente";
+  citacao?: CitacaoLacuna | null;
+};
+
+export type ExcertoCorrelacaoMsg = {
+  n: number;
+  papel: "A" | "B" | "relacao";
+  documento_id: string;
+  pagina: number;
+  texto: string;
+};
+
 export type MensagemFalsa =
   | { id: string; papel: "utilizador"; texto: string }
   | {
@@ -48,6 +68,19 @@ export type MensagemFalsa =
       texto?: string;
       excertos?: ExcertoMsg[];
       miniaturas?: MiniaturaMsg[];
+      /** Correlacionar: legendas A/B/Relação no fio (issue #74). */
+      correlacionar?: boolean;
+      excertosCorrelacao?: ExcertoCorrelacaoMsg[];
+      /** Lacunas: estado + citação opcional por linha (issue #75). */
+      lacunas?: ItemLacunaMsg[];
+      /** Confrontar: pontuações para o fio. */
+      confronto?: {
+        leitura: string;
+        score: number;
+        cos: number;
+        j_ab: number;
+        j_ba: number;
+      };
     };
 
 type ChatInterno = {
@@ -62,7 +95,13 @@ let chats: ChatInterno[] = [];
 /** Em Vitest ``reiniciarApiFalsa`` activa o falso; no build fica o motor real. */
 let usarFalso = false;
 let limiarActual = 0.55;
+let plattActivoActual = false;
 let alertasFalsos: { id: string; texto: string; lente: LentePedido }[] = [];
+
+export type EstadoLimiarUi = {
+  valor: number;
+  platt_activo: boolean;
+};
 
 function agoraIso(): string {
   return new Date().toISOString();
@@ -116,6 +155,7 @@ export function reiniciarApiFalsa(): void {
   chats = [];
   usarFalso = true;
   limiarActual = 0.55;
+  plattActivoActual = false;
   alertasFalsos = [];
   documentosFalsos = {};
   paginasFalsas = {};
@@ -260,23 +300,38 @@ export function semearConversas(
 
 /* ——— Modos da barra (PLN-14) ——— */
 
-export async function obterLimiar(): Promise<number> {
+export async function obterEstadoLimiar(): Promise<EstadoLimiarUi> {
   if (!usarFalso) {
     try {
-      const saude = await pedir<{ limiar?: number }>("/health");
+      const saude = await pedir<{
+        limiar?: number;
+        platt_activo?: boolean;
+      }>("/health");
       if (saude && typeof saude.limiar === "number") {
         limiarActual = saude.limiar;
-        return limiarActual;
+        plattActivoActual = Boolean(saude.platt_activo);
+        return { valor: limiarActual, platt_activo: plattActivoActual };
       }
     } catch {
       /* motor indisponível — mantém último valor conhecido */
     }
   }
-  return limiarActual;
+  return { valor: limiarActual, platt_activo: plattActivoActual };
 }
 
-export function definirLimiarFalso(valor: number): void {
+export async function obterLimiar(): Promise<number> {
+  const estado = await obterEstadoLimiar();
+  return estado.valor;
+}
+
+export function definirLimiarFalso(
+  valor: number,
+  opts?: { platt_activo?: boolean },
+): void {
   limiarActual = valor;
+  if (opts?.platt_activo !== undefined) {
+    plattActivoActual = opts.platt_activo;
+  }
 }
 
 export type ResultadoProcura = {
@@ -520,6 +575,9 @@ export async function confrontar(pedido: {
   mensagem_id: string;
   leitura: "concordam" | "contradizem-se" | "assuntos_diferentes";
   score: number;
+  cos: number;
+  j_ab: number;
+  j_ba: number;
   trecho_a: { documento_id?: string; pagina?: number; texto: string };
   trecho_b: { documento_id?: string; pagina?: number; texto: string };
 }> {
@@ -554,6 +612,9 @@ export async function confrontar(pedido: {
     mensagem_id: novoId("msg"),
     leitura,
     score: (jAb + jBa) / 2,
+    cos,
+    j_ab: jAb,
+    j_ba: jBa,
     trecho_a: {
       documento_id: pedido.trecho_a.documento_id,
       pagina: pedido.trecho_a.pagina,
@@ -573,7 +634,7 @@ export async function lacunas(pedido: {
   lente: LentePedido;
 }): Promise<{
   mensagem_id: string;
-  itens: { linha: string; estado: "encontrado" | "fraco" | "ausente" }[];
+  itens: ItemLacunaMsg[];
   escritor_chamado: false;
   lente: LentePedido;
 }> {
@@ -593,6 +654,7 @@ export async function lacunas(pedido: {
     itens: pedido.linhas.map((linha) => ({
       linha,
       estado: "ausente" as const,
+      citacao: null,
     })),
   };
 }

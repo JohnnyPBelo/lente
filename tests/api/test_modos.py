@@ -70,6 +70,52 @@ def test_confrontar_com_texto_colado() -> None:
     assert r["trecho_a"]["texto"]
 
 
+def test_confrontar_texto_colado_sem_injectaveis_nao_fica_tudo_zero() -> None:
+    """Sem _cos/_j_*: Jaccard lexical deve pontuar sobreposição (issue #76)."""
+    r = confrontar(
+        {
+            "chat_id": "cht_01",
+            "trecho_a": {
+                "texto": "O impacto ambiental no rio Douro é moderado."
+            },
+            "trecho_b": {
+                "texto": "O impacto ambiental no rio Douro requer mitigação."
+            },
+        }
+    )
+    assert r["cos"] > 0.0
+    assert r["j_ab"] > 0.0
+    assert r["j_ba"] > 0.0
+    assert r["score"] > 0.0
+
+
+def test_confrontar_usa_pontuar_e_cosseno_injectados() -> None:
+    """Com doubles de juiz/embedding, os scores não caem a zero (issue #76)."""
+
+    def pontuar(a: str, b: str) -> float:
+        del a, b
+        return 0.71
+
+    def cosseno(a: str, b: str) -> float:
+        del a, b
+        return 0.82
+
+    r = confrontar(
+        {
+            "chat_id": "cht_01",
+            "trecho_a": {"texto": "impacto moderado nos peixes"},
+            "trecho_b": {"texto": "mitigação do impacto nos peixes"},
+        },
+        pontuar=pontuar,
+        cosseno=cosseno,
+    )
+    assert r["cos"] == pytest.approx(0.82)
+    assert r["j_ab"] == pytest.approx(0.71)
+    assert r["j_ba"] == pytest.approx(0.71)
+    assert r["leitura"] == "concordam"
+    assert r["score"] == pytest.approx(0.71)
+
+
 def test_correlacionar_sem_indice_nao_inventa_docs() -> None:
     """Sem pesquisar injectado → eventos vazios (issue #51)."""
     r = correlacionar(

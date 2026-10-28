@@ -18,6 +18,7 @@ import {
   criarAlerta,
   criarConversa,
   lacunas,
+  obterEstadoLimiar,
   obterLimiar,
   procurar,
   type ResultadoProcura,
@@ -97,6 +98,7 @@ export function BarraEscrita({
   const [lacunasTexto, setLacunasTexto] = useState("");
   const [erroAlerta, setErroAlerta] = useState<string | null>(null);
   const [limiar, setLimiar] = useState<number | null>(null);
+  const [plattActivo, setPlattActivo] = useState(false);
 
   const voltarProcurar = useCallback(() => {
     setMenuAberto(false);
@@ -148,9 +150,10 @@ export function BarraEscrita({
 
   useEffect(() => {
     let vivo = true;
-    obterLimiar().then((v) => {
+    obterEstadoLimiar().then((estado) => {
       if (vivo) {
-        setLimiar(v);
+        setLimiar(estado.valor);
+        setPlattActivo(estado.platt_activo);
       }
     });
     return () => {
@@ -377,8 +380,14 @@ export function BarraEscrita({
       />
 
       {limiar !== null && (
-        <p className="barra-limiar" data-testid="limiar-visivel">
-          {copy.chat.threshold}: {limiar}
+        <p
+          className="barra-limiar"
+          data-testid="limiar-visivel"
+          data-platt={plattActivo ? "true" : "false"}
+        >
+          {plattActivo
+            ? `${copy.chat.threshold}: ${limiar}`
+            : `${copy.chat.threshold_raw}: ${limiar} (${copy.chat.threshold_uncalibrated})`}
         </p>
       )}
 

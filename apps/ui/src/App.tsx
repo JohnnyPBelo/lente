@@ -7,6 +7,7 @@ import { MensagemComDocumentos } from "./components/chat/MensagemComDocumentos";
 import { SlotLeitor } from "./components/leitor/SlotLeitor";
 import { ProcuraSemDocumentos } from "./components/vazios/ProcuraSemDocumentos";
 import { BotaoFecharDossier } from "./components/dossier/BotaoFecharDossier";
+import type { DestinoLeitor } from "./components/leque/LequeLeitor";
 import {
   criarConversa,
   fecharDossier,
@@ -28,6 +29,7 @@ export function App() {
   const [vistaBiblioteca, setVistaBiblioteca] = useState(false);
   const [miniaturasActivas, setMiniaturasActivas] = useState<MiniaturaDoc[]>([]);
   const [mensagemLeitorId, setMensagemLeitorId] = useState<string | undefined>();
+  const [destinoLeitor, setDestinoLeitor] = useState<DestinoLeitor | null>(null);
   const [listaEpoch, setListaEpoch] = useState(0);
   const [avisoModo, setAvisoModo] = useState<string | null>(null);
   const criarConversaEmCurso = useRef<Promise<string> | null>(null);
@@ -36,6 +38,7 @@ export function App() {
     if (!ultima || ultima.papel !== "assistente") {
       setMiniaturasActivas([]);
       setMensagemLeitorId(undefined);
+      setDestinoLeitor(null);
       return;
     }
     const mini = (ultima.miniaturas ?? []).map(
@@ -47,6 +50,7 @@ export function App() {
     );
     setMiniaturasActivas(mini);
     setMensagemLeitorId(ultima.id);
+    setDestinoLeitor(null);
   }, []);
 
   const carregarConversa = useCallback(
@@ -106,6 +110,27 @@ export function App() {
     return criarConversaEmCurso.current;
   }, [conversaActivaId]);
 
+  const garantirMiniatura = useCallback((documentoId: string, pagina = 1) => {
+    setMiniaturasActivas((prev) =>
+      prev.some((m) => m.documento_id === documentoId)
+        ? prev
+        : [...prev, { documento_id: documentoId, pagina, url: "" }],
+    );
+  }, []);
+
+  const aoAbrirCitacao = useCallback(
+    (d: { documento_id: string; pagina: number; n: number }) => {
+      if (!d.documento_id) return;
+      garantirMiniatura(d.documento_id, d.pagina);
+      setDestinoLeitor({
+        documento_id: d.documento_id,
+        pagina: d.pagina,
+        n: d.n,
+      });
+    },
+    [garantirMiniatura],
+  );
+
   const aoResultado = useCallback(
     async (r: ResultadoBarra) => {
       setAvisoModo(null);
@@ -121,14 +146,24 @@ export function App() {
       }
 
       if (r.tipo === "confrontar") {
+        const cos = Number(r.resposta.cos ?? 0);
+        const jAb = Number(r.resposta.j_ab ?? 0);
+        const jBa = Number(r.resposta.j_ba ?? 0);
         const assistente: MensagemFalsa = {
           id: r.resposta.mensagem_id ?? `msg_local_a_${Date.now()}`,
           papel: "assistente",
-          texto: `${leituraConfrontar(r.resposta.leitura)} (${r.resposta.score.toFixed(2)})`,
+          texto: `${leituraConfrontar(r.resposta.leitura)} (${r.resposta.score.toFixed(2)}; cos ${cos.toFixed(2)}; j_ab ${jAb.toFixed(2)}; j_ba ${jBa.toFixed(2)})`,
           frases: [
             r.resposta.trecho_a.texto,
             r.resposta.trecho_b.texto,
           ].filter(Boolean),
+          confronto: {
+            leitura: r.resposta.leitura,
+            score: r.resposta.score,
+            cos,
+            j_ab: jAb,
+            j_ba: jBa,
+          },
         };
         setMensagens((prev) => [
           ...prev,
@@ -144,23 +179,40 @@ export function App() {
 
       if (r.tipo === "correlacionar") {
         const eventos = r.resposta.eventos ?? [];
-        const excertos = eventos
-          .filter((e) => e.documento_id)
+        const excertosCorrelacao = eventos
+          .filter((e) => e.documento_id && e.texto)
           .map((e, i) => ({
             n: i + 1,
+            papel: (e.papel === "B" || e.papel === "relacao"
+              ? e.papel
+              : "A") as "A" | "B" | "relacao",
             documento_id: e.documento_id,
-            pagina: e.pagina,
+            pagina: e.pagina ?? 1,
             texto: e.texto,
           }));
+        const miniaturas = dedupeMiniaturas(
+          excertosCorrelacao.map((e) => ({
+            documento_id: e.documento_id,
+            pagina: e.pagina,
+            url: "",
+          })),
+        );
         const assistente: MensagemFalsa = {
           id: r.resposta.mensagem_id ?? `msg_local_a_${Date.now()}`,
           papel: "assistente",
-          excertos,
+          correlacionar: true,
+          excertosCorrelacao,
+          excertos: excertosCorrelacao.map((e) => ({
+            n: e.n,
+            documento_id: e.documento_id,
+            pagina: e.pagina,
+            texto: e.texto,
+          })),
+          miniaturas,
           texto:
-            excertos.length === 0
+            excertosCorrelacao.length === 0
               ? "Sem documentos no índice para estes conceitos."
-              : excertos.map((e) => e.texto).filter(Boolean).join("\n"),
-          frases: excertos.map((e) => e.texto || "").filter(Boolean),
+              : undefined,
         };
         setMensagens((prev) => [
           ...prev,
@@ -176,14 +228,33 @@ export function App() {
       }
 
       if (r.tipo === "lacunas") {
-        const linhas = (r.resposta.itens ?? []).map(
-          (i) => `${i.estado}: ${i.linha}`,
-        );
+        const itens = (r.resposta.itens ?? []).map((i) => ({
+          linha: i.linha,
+          estado: i.estado,
+          citacao: i.citacao ?? null,
+        }));
         const assistente: MensagemFalsa = {
           id: r.resposta.mensagem_id ?? `msg_local_a_${Date.now()}`,
           papel: "assistente",
-          texto: linhas.join("\n") || "Sem linhas.",
-          frases: linhas,
+          lacunas: itens,
+          texto: itens.map((i) => `${i.estado}: ${i.linha}`).join("\n") || "Sem linhas.",
+          excertos: itens
+            .filter((i) => i.citacao?.documento_id)
+            .map((i, idx) => ({
+              n: idx + 1,
+              documento_id: i.citacao!.documento_id,
+              pagina: i.citacao!.pagina,
+              texto: i.citacao?.texto,
+            })),
+          miniaturas: dedupeMiniaturas(
+            itens
+              .filter((i) => i.citacao?.documento_id)
+              .map((i) => ({
+                documento_id: i.citacao!.documento_id,
+                pagina: i.citacao!.pagina,
+                url: "",
+              })),
+          ),
         };
         setMensagens((prev) => [
           ...prev,
@@ -194,6 +265,7 @@ export function App() {
           },
           assistente,
         ]);
+        aplicarAssistente(assistente);
         return;
       }
 
@@ -214,6 +286,7 @@ export function App() {
           );
           setMiniaturasActivas(mini);
           setMensagemLeitorId(r.resposta.mensagem_id);
+          setDestinoLeitor(null);
         }
       } catch {
         const idUser = `msg_local_${Date.now()}`;
@@ -280,6 +353,75 @@ export function App() {
               mensagens={mensagens}
               renderAssistente={(mensagem) => {
                 if (mensagem.papel !== "assistente") return null;
+
+                if (mensagem.correlacionar) {
+                  const excertos = mensagem.excertosCorrelacao ?? [];
+                  const miniaturas = (mensagem.miniaturas ?? []).map(
+                    (m): MiniaturaDoc => ({
+                      documento_id: m.documento_id,
+                      pagina: m.pagina,
+                      url: m.url ?? "",
+                    }),
+                  );
+                  if (!excertos.length && !mensagem.texto) {
+                    return <ProcuraSemDocumentos />;
+                  }
+                  return (
+                    <div className="mensagem-docs-com-leitura">
+                      {mensagem.texto ? (
+                        <p className="mensagem-assistente__texto" role="status">
+                          {mensagem.texto}
+                        </p>
+                      ) : null}
+                      <MensagemComDocumentos
+                        mensagemId={mensagem.id}
+                        correlacionar
+                        excertos={excertos}
+                        miniaturas={miniaturas}
+                        frases={[]}
+                        onAbrirDoc={(id) => garantirMiniatura(id)}
+                        onAbrirCitacao={aoAbrirCitacao}
+                      />
+                    </div>
+                  );
+                }
+
+                if (mensagem.lacunas) {
+                  const frasesFonte = mensagem.lacunas.map((item, i) => {
+                    const cit = item.citacao;
+                    return {
+                      texto: `${item.estado}: ${item.linha}`,
+                      n: i + 1,
+                      destino:
+                        item.estado !== "ausente" && cit?.documento_id
+                          ? {
+                              n: i + 1,
+                              documento_id: cit.documento_id,
+                              pagina: cit.pagina,
+                            }
+                          : null,
+                    };
+                  });
+                  const miniaturas = (mensagem.miniaturas ?? []).map(
+                    (m): MiniaturaDoc => ({
+                      documento_id: m.documento_id,
+                      pagina: m.pagina,
+                      url: m.url ?? "",
+                    }),
+                  );
+                  return (
+                    <div className="mensagem-docs-com-leitura">
+                      <MensagemComDocumentos
+                        mensagemId={mensagem.id}
+                        miniaturas={miniaturas}
+                        frases={frasesFonte}
+                        onAbrirDoc={(id) => garantirMiniatura(id)}
+                        onAbrirCitacao={aoAbrirCitacao}
+                      />
+                    </div>
+                  );
+                }
+
                 const excertos = mensagem.excertos ?? [];
                 const miniaturas = (mensagem.miniaturas ?? []).map(
                   (m): MiniaturaDoc => ({
@@ -290,15 +432,20 @@ export function App() {
                 );
                 const frasesFonte =
                   mensagem.frases && mensagem.frases.length
-                    ? mensagem.frases.map((texto, i) => ({
-                        texto,
-                        n: i + 1,
-                        destino: {
-                          n: excertos[0]?.n ?? i + 1,
-                          documento_id: excertos[0]?.documento_id ?? "",
-                          pagina: excertos[0]?.pagina ?? 1,
-                        },
-                      }))
+                    ? mensagem.frases.map((texto, i) => {
+                        const ex = excertos[i] ?? excertos[0];
+                        return {
+                          texto,
+                          n: i + 1,
+                          destino: ex?.documento_id
+                            ? {
+                                n: ex.n ?? i + 1,
+                                documento_id: ex.documento_id,
+                                pagina: ex.pagina ?? 1,
+                              }
+                            : null,
+                        };
+                      })
                     : excertos
                         .filter((e) => e.texto)
                         .map((e) => ({
@@ -327,7 +474,11 @@ export function App() {
                 }
                 return (
                   <div className="mensagem-docs-com-leitura">
-                    {mensagem.texto ? (
+                    {mensagem.texto && mensagem.confronto ? (
+                      <p className="mensagem-assistente__texto" role="status">
+                        {mensagem.texto}
+                      </p>
+                    ) : mensagem.texto && !frasesFonte.length ? (
                       <p className="mensagem-assistente__texto" role="status">
                         {mensagem.texto}
                       </p>
@@ -336,30 +487,8 @@ export function App() {
                       mensagemId={mensagem.id}
                       miniaturas={miniaturas}
                       frases={frasesFonte}
-                      onAbrirDoc={(id) => {
-                        setMiniaturasActivas((prev) =>
-                          prev.some((m) => m.documento_id === id)
-                            ? prev
-                            : [
-                                ...prev,
-                                { documento_id: id, pagina: 1, url: "" },
-                              ],
-                        );
-                      }}
-                      onAbrirCitacao={(d) => {
-                        setMiniaturasActivas((prev) =>
-                          prev.some((m) => m.documento_id === d.documento_id)
-                            ? prev
-                            : [
-                                ...prev,
-                                {
-                                  documento_id: d.documento_id,
-                                  pagina: d.pagina,
-                                  url: "",
-                                },
-                              ],
-                        );
-                      }}
+                      onAbrirDoc={(id) => garantirMiniatura(id)}
+                      onAbrirCitacao={aoAbrirCitacao}
                     />
                   </div>
                 );
@@ -376,6 +505,7 @@ export function App() {
               mensagemId={mensagemLeitorId}
               chatId={conversaActivaId ?? undefined}
               miniaturas={miniaturasActivas}
+              destino={destinoLeitor}
             />
           </>
         )}
@@ -388,4 +518,17 @@ function leituraConfrontar(leitura: string): string {
   if (leitura === "concordam") return copy.confront.reading_agree;
   if (leitura === "contradizem-se") return copy.confront.reading_contradict;
   return copy.confront.reading_different;
+}
+
+function dedupeMiniaturas(
+  itens: { documento_id: string; pagina: number; url: string }[],
+): MiniaturaMsg[] {
+  const vistos = new Set<string>();
+  const saida: MiniaturaMsg[] = [];
+  for (const item of itens) {
+    if (vistos.has(item.documento_id)) continue;
+    vistos.add(item.documento_id);
+    saida.push(item);
+  }
+  return saida;
 }

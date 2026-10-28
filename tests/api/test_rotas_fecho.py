@@ -88,6 +88,8 @@ def test_health_documenta_fts_e_limiar(caminho_tmp: Path) -> None:
     assert h["procura"] in {"fts", "fts_degradado"}
     assert "limiar" in h
     assert isinstance(h["limiar"], (int, float))
+    assert "platt_activo" in h
+    assert isinstance(h["platt_activo"], bool)
 
 
 def test_correlate_sem_docs_nao_inventa_ids(caminho_tmp: Path) -> None:

@@ -16,7 +16,8 @@ export type ExcertoCorrelacao = {
 export type FraseComCitacao = {
   texto: string;
   n: number;
-  destino: DestinoCitacao;
+  /** Sem destino (ex. lacuna «ausente») → sem link «Abrir na página». */
+  destino?: DestinoCitacao | null;
 };
 
 export type MensagemComDocumentosProps = {
@@ -64,8 +65,17 @@ export function MensagemComDocumentos({
       ) : null}
       {frases.map((frase) => (
         <p key={frase.n} className="mensagem-docs__frase">
-          {frase.texto}{" "}
-          <CitacaoLink n={frase.n} destino={frase.destino} onAbrir={onAbrirCitacao} />
+          {frase.texto}
+          {frase.destino?.documento_id ? (
+            <>
+              {" "}
+              <CitacaoLink
+                n={frase.n}
+                destino={frase.destino}
+                onAbrir={onAbrirCitacao}
+              />
+            </>
+          ) : null}
         </p>
       ))}
       {mensagemId ? (
