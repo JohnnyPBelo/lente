@@ -184,3 +184,7 @@ tests/ingestao/test_pdf_moderno.py::test_extrair_pdf_moderno_nao_levanta_sem_pag
 tests/ingestao/test_pdf_moderno.py::test_extrair_pdf_reportlab_se_disponivel
 
 apps/ui/src/components/onboarding/onboarding.test.tsx
+
+tests/ingestao/test_indexar_grande.py::test_indexar_texto_grande_em_blocos
+tests/embeddings/test_embutir_lote.py::test_embutir_lote_agrupa_passes
+tests/api/test_procura_refina_frase.py::test_procura_refina_excerto_a_frase
